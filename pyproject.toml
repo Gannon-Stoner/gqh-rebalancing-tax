@@ -8,14 +8,20 @@ version = "0.1.0"
 description = "Gator Quant Hacks 2026: pre-registered month-end 60/40 rebalancing test on ES/ZN futures"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = [
-    "numpy",
-    "pandas",
-    "scipy",
-    "exchange_calendars",
-    "pyyaml",
-    "statsmodels",
+dependencies = [   # pinned to the versions every reported number was produced with
+    "numpy==2.4.1",
+    "pandas==2.3.3",
+    "scipy==1.16.3",
+    "exchange_calendars==4.12",
+    "pyyaml==6.0.3",
+    "statsmodels==0.14.6",
+    "databento==0.69.0",
+    "pyarrow==22.0.0",
+    "backtrader==1.9.78.123",   # second-engine replay (the Webull starter kit's engine)
 ]
+
+[project.optional-dependencies]
+test = ["pytest==8.4.2"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
