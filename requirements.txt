@@ -8,3 +8,4 @@ pyarrow==22.0.0
 matplotlib==3.10.8
 databento==0.69.0
 pytest==8.4.2
+backtrader==1.9.78.123

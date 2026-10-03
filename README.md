@@ -1,11 +1,17 @@
-# GQH 2026: the month-end rebalancing tax on ES/ZN
+# GQH 2026: paying for what is left of the month-end rebalancing move (ES/ZN)
 
-Tests whether a month-end 60/40 rebalancing-flow trade on ES/ZN futures works better
-when it is gated on how much of the expected move has already happened.
+Tests whether a month-end 60/40 rebalancing-flow trade on ES/ZN futures works better when it is
+gated on how much of the expected move has already happened before we can trade.
 
-**Pre-registered:** see [HYPOTHESIS.md](HYPOTHESIS.md) and `config/frozen.yaml`, committed
-under the tag `prereg-final`. Neither file changes after that tag; corrections go in
-`AMENDMENTS.md` (bug fixes and data facts only).
+- **Pre-registered.** [HYPOTHESIS.md](HYPOTHESIS.md) and `config/frozen.yaml` were committed and
+  pushed under the tag `prereg-final` before any price data was loaded. They never change;
+  corrections go in [AMENDMENTS.md](AMENDMENTS.md) (bug fixes, data facts, clarifications), each
+  dated and made before the run it affects.
+- **Protocol tags.** `prereg-final` (hypothesis) → `freeze-is` (code frozen; the in-sample run
+  happens once) → `freeze-final` (fresh-clone reproduction passed; the out-of-sample data is
+  loaded and evaluated once). `python -m gqh.reproduce` refuses to run before the matching tag.
+- **One command rebuilds every number:** `python -m gqh.reproduce` writes `results_is.json`
+  (or `results.json` with `--sample ALL`); two runs are byte-identical.
 
 ## Setup
 
@@ -13,17 +19,47 @@ under the tag `prereg-final`. Neither file changes after that tag; corrections g
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 pip install -e .
+python -m pytest            # deterministic; no network, no market data
 ```
 
-## Tests
+## Data (licensed data is never committed)
 
 ```bash
-python -m pytest
+cp .env.example .env                      # add DATABENTO_API_KEY=...
+python data/download.py                   # free cost check of every request
+python data/download.py --pull is         # in-sample: definitions, statistics, outright 1-minute bars/quotes
+python data/download_factors.py           # Ken French daily FF3 + momentum (public)
+python scripts/is_coverage.py             # data audit -> reports/is_coverage.md (aggregates only)
 ```
 
-Tests are deterministic and use no network access and no market data.
+Every downloaded file is recorded with its request and SHA-256 in `data/manifest.json`. The
+bbo-1m years from 2013 on were bought as one Databento batch job (`--batch-submit` / `--batch-fetch`,
+recorded in `data/batch_jobs.json`) because streaming was throttled; the data is identical.
 
-## Data
+## Pipeline
 
-- Put your Databento key in `.env` (copy `.env.example`): `DATABENTO_API_KEY=...`.
-- Raw licensed data (`data/`, `*.dbn`, `*.dbn.zst`) is never committed.
+| Step | Command | Output |
+|---|---|---|
+| Inference calibration (synthetic) | `python scripts/calibrate_inference.py` | `reports/inference_calibration.md` |
+| Masked plumbing run (no returns) | `python scripts/plumbing_run.py` | `reports/plumbing_p0.md`, `trials.jsonl` |
+| In-sample run (after `freeze-is`) | `python -m gqh.reproduce` | `results_is.json` |
+| Fresh-clone reproduction | `scripts/fresh_clone_check.sh` | byte-identical results check |
+| Out of sample (after `freeze-final`) | `python -m gqh.reproduce --sample ALL` | `results.json` |
+| Figures and note | `python -m gqh.report results.json && python scripts/render_note.py results.json` | `reports/figures/`, `note/note.pdf` |
+
+## Layout
+
+| Path | Contents |
+|---|---|
+| `src/gqh/calendar.py` | sessions, L, F1, L−k, ex-ante decision dates, early closes |
+| `src/gqh/contracts.py` | ES max-OI and ZN first-position-day selection, reference returns |
+| `src/gqh/panel.py`, `data.py`, `quotes.py` | Databento settlements, derived panels, minute extracts, quote state |
+| `src/gqh/signals.py` | drift, σ̂, dose, direction, progress A, outcome Y |
+| `src/gqh/gate.py`, `strategy.py`, `engine.py` | walk-forward gate, the six rows, contract-level P&L and fills |
+| `src/gqh/stats.py`, `metrics.py` | month-block bootstrap, Holm, DSR, ΔSR CIs; row metrics |
+| `src/gqh/risk.py`, `capacity.py`, `diagnostics.py` | stress, factors, margin, survival, impact; capacity; §6 diagnostics |
+| `src/gqh/bt_replay.py` | second engine: every trade replayed in Backtrader (the Webull starter kit's engine) |
+| `src/gqh/pipeline.py`, `reproduce.py`, `report.py` | end-to-end run, one command, figures |
+| `tests/` | 220+ tests, including impulse timing, truncation/leakage, roll accounting, reproducibility |
+
+Every run is logged to `trials.jsonl`.

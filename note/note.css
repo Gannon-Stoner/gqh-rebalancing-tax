@@ -1,0 +1,25 @@
+@page { size: Letter; margin: 0.55in 0.6in 0.55in 0.6in; }
+:root { --ink: #1a1a1a; --muted: #555; --rule: #c9c9c9; --accent: #1f4e79; }
+html { font-size: 9.4pt; }
+body { font-family: "Charter", "Georgia", serif; color: var(--ink); background: #fff; line-height: 1.32;
+       max-width: none; margin: 0; padding: 0; }
+header#title-block-header { display: none; }
+h1 { font-size: 15pt; margin: 0 0 2pt 0; color: var(--accent); }
+.byline { color: var(--muted); font-size: 8.6pt; margin-bottom: 6pt; }
+h2 { font-size: 11pt; margin: 9pt 0 3pt 0; color: var(--accent); border-bottom: 0.6pt solid var(--rule); padding-bottom: 1pt; }
+h3 { font-size: 9.6pt; margin: 6pt 0 2pt 0; }
+p { margin: 0 0 4.5pt 0; text-align: justify; hyphens: auto; }
+ul, ol { margin: 0 0 4.5pt 0; padding-left: 14pt; }
+li { margin: 0 0 1.5pt 0; }
+table { border-collapse: collapse; width: 100%; font-size: 8pt; margin: 3pt 0 6pt 0; font-family: "Helvetica Neue", Arial, sans-serif; }
+th, td { border-bottom: 0.4pt solid var(--rule); padding: 1.6pt 3pt; text-align: right; }
+th:first-child, td:first-child { text-align: left; }
+thead th { border-bottom: 0.8pt solid #888; }
+figure { margin: 3pt 0 6pt 0; break-inside: avoid; }
+figure img { width: 100%; }
+figcaption { font-size: 7.8pt; color: var(--muted); margin-top: 1pt; }
+.row { display: flex; gap: 10pt; align-items: flex-start; }
+.row > figure, .row > div { flex: 1 1 0; }
+.small { font-size: 8pt; color: var(--muted); }
+code { font-size: 8.2pt; }
+.pagebreak { break-before: page; }
