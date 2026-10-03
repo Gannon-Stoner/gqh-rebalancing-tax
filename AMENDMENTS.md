@@ -192,3 +192,20 @@ The dry-run script now prints only pass/fail checks: no gate-dependent counts an
 - **Contracts.** Every contract ever held or used for reference returns (117) is present in both bbo-1m and ohlcv-1m, including all 98 whose one-digit exchange symbols repeat across decades. No non-outright instrument entered the files.
 - **Quotes at the 15:59 ET fill minute.** The front contracts have a fresh quote (≤ 5 minutes old, A9) on every regular session except 3 in 2014 (Databento-degraded days) and 1 in 2010. For the 159 usable PX-eligible IS events, every held contract has a fresh quote on both the entry (L−4) and exit (F1) days. No PX fill needs the exit fallback for lack of data. Spreads are 1 tick at the median and the 95th percentile, 2 ticks at most, which supports the frozen half-spread costs.
 - **Thin ZN volume at 15:59 ET.** The held ZN contract's 15:59 ET bar trades a median of 1,190 contracts (10th percentile 94, minimum 0). ZN settles at 15:00 ET, and around rolls the held contract can be the deferred one. Quotes exist at that minute, but trades can be sparse, so PX capacity is reported on that minute and is expected to bind on ZN. Settlement rows use the 14:59 ET ZN window.
+
+
+## A18. Commit messages edited (2026-10-03, before `freeze-is`)
+
+The messages of the first nine commits were edited to remove a co-author trailer. No file changed. Every rewritten commit keeps the same tree hash, author, committer and timestamps, so its content is byte-identical. `prereg-final` was re-created on the rewritten pre-registration commit with its original message and tagger timestamp (2026-10-03 13:24:00 −0400). The old SHAs no longer resolve on GitHub; the mapping is:
+
+| Old commit | New commit | Tree (unchanged) | Date |
+|---|---|---|---|
+| 6155769 | 12b55ef | 36041fe8abba | 2026-10-03 13:24:00 -0400 |
+| ce16dd7 | abcbc31 | 0252618a48ce | 2026-10-03 14:26:40 -0400 |
+| 566fed6 | 177a7f3 | c616834059bb | 2026-10-03 14:46:52 -0400 |
+| bbe3148 | 489606c | 855218af3c82 | 2026-10-03 15:23:14 -0400 |
+| c1e1ad0 | e8bf6c6 | e2a89ab079dd | 2026-10-03 17:20:50 -0400 |
+| d6bf526 | c8e305a | 043e1f6e0c5d | 2026-10-03 17:20:50 -0400 |
+| 2a6aef4 | 5826fcc | 95d9015e2db5 | 2026-10-03 17:20:50 -0400 |
+| 57141bc | 5e3dd1b | 8e281b549eaf | 2026-10-03 18:29:08 -0400 |
+| 4e71e7b | a0d10d3 | e9508ccf0706 | 2026-10-03 18:29:08 -0400 |
