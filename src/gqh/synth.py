@@ -512,3 +512,26 @@ def protocol_null_legs(sessions, name: str = "base", *, seed) -> pd.DataFrame:
     """Daily ES/ZN log returns under a registered synthetic null (A4)."""
     spec = PROTOCOL_NULLS[name]
     return correlated_leg_returns(sessions, seed=seed, **spec)
+
+
+def contract_panel_from_returns(returns: pd.Series, *, root: str, start_price: float = 100.0,
+                                instrument_id: int | None = None) -> pd.DataFrame:
+    """A one-contract settlement panel whose within-contract log returns equal ``returns``.
+
+    The contract never expires inside the sample (expiration and, for ZN, first
+    position day 2099-12-31), so selection always picks it and every window
+    return is exactly a sum of ``returns``. The first session's return is
+    ignored (it fixes the starting settle). Columns match the long panel format
+    of ``gqh.contracts``.
+    """
+    r = returns.fillna(0.0).to_numpy(dtype=float).copy()
+    r[0] = 0.0
+    settle = start_price * np.exp(np.cumsum(r))
+    root = root.upper()
+    iid = instrument_id if instrument_id is not None else (1 if root == "ES" else 2)
+    far = pd.Timestamp("2099-12-31")
+    return pd.DataFrame({
+        "date": pd.DatetimeIndex(returns.index), "instrument_id": iid, "symbol": f"{root}Z9",
+        "expiration": far, "settle": settle, "open_interest": 1_000_000,
+        "first_position_day": far if root == "ZN" else pd.NaT,
+    })

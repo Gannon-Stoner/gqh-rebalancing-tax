@@ -95,6 +95,11 @@ class FrozenConfig:
         Full-dose ex-ante 5-day risk per event as a fraction of NAV (0.03/sqrt(12)).
     dose_cap : float
         dose = min(|z|, dose_cap).
+    target_equity_weight : float
+        Equity weight w of the hypothetical calendar rebalancer (0.60).
+    progress_scale_sessions, outcome_scale_sessions : int
+        Return counts in the progress and holding windows (3 and 5); A and Y are
+        scaled by sigma_hat * sqrt(these).
     min_events : int
         Minimum completed events before the gate is fitted.
     reference_nav : float
@@ -119,6 +124,9 @@ class FrozenConfig:
     ewma_lambda: float
     kappa: float
     dose_cap: float
+    target_equity_weight: float
+    progress_scale_sessions: int
+    outcome_scale_sessions: int
     min_events: int
     reference_nav: float
     multipliers: Mapping[str, float]
@@ -154,6 +162,9 @@ class FrozenConfig:
             ewma_lambda=float(raw["signal"]["ewma_lambda"]),
             kappa=float(raw["sizing"]["kappa"]),
             dose_cap=_parse_dose_cap(raw["signal"]["dose"]),
+            target_equity_weight=float(raw["signal"]["target_equity_weight"]),
+            progress_scale_sessions=int(raw["signal"]["progress_scale_sessions"]),
+            outcome_scale_sessions=int(raw["signal"]["outcome_scale_sessions"]),
             min_events=int(raw["gate"]["min_events"]),
             reference_nav=float(raw["sizing"]["reference_nav_usd"]),
             multipliers=_ro({k: float(v) for k, v in contracts["multiplier_usd_per_point"].items()}),

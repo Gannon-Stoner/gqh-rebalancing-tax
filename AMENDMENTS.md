@@ -52,3 +52,23 @@ Each null is generated as daily ES/ZN legs and run through the real schedule and
 ## A5. Pseudo-event signal timing (clarification; approved 2026-10-03)
 
 Pseudo-event σ̂ and drift are computed with data through the pseudo decision date M = L−14 only. "Data through L−5" in §3 refers to the month-end event; using it for a pseudo-event would be look-ahead, because L−5 is after the pseudo exit at L−8.
+
+## A6. Pseudo-event ES contract (clarification; before any market data)
+
+The event rule takes the "highest open-interest outright at L−8". Applied literally at the pseudo anchor L−17, it picks the expiring front contract in every quarterly month, because the ES front still holds the most open interest early in March, June, September and December. That contract expires before the pseudo exit, so those pseudo-events would become untradable. Pseudo-events would then exclude every quarter-end month, which biases the H2 comparison.
+
+Pseudo-events therefore take the highest-OI ES outright **among contracts expiring after the pseudo exit**. Events keep the frozen rule verbatim: if the selected contract expires on or before F1, the event is flagged untradable rather than substituted. On realistic open-interest roll patterns this never binds for events, because open interest leaves the front before L−8. For ZN, pseudo-events take the nearest contract whose first position day is after the pseudo exit.
+
+## A7. EWMA initialization (implementation detail; before any market data)
+
+σ̂ is a zero-mean EWMA (λ = 0.94) of daily X, using data through the decision date.
+- The recursion starts from the mean of the first 21 squared returns.
+- σ̂ is undefined until 63 valid daily returns have been seen. Events before that are invalid; with data from 2010-06-07, the first valid event is September 2010.
+- A missing daily return leaves the variance unchanged; it is never filled.
+
+## A8. Which contracts feed which quantity (clarification; before any market data)
+
+- **Drift D and σ̂** use reference daily within-contract returns. The return on session t is computed on the outright with the highest open interest on t−1 that still trades on t (ES: not expired; ZN: before its first position day). Both prices come from one contract, so roll gaps never enter.
+- **Progress A and outcome Y** use the contracts the event actually holds (A6 and §2), so Y is the traded position's return.
+
+Missing settlements are never filled. A gap inside a drift window makes D undefined, and the event is invalid.
