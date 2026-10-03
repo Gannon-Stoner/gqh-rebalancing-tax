@@ -72,3 +72,13 @@ Pseudo-events therefore take the highest-OI ES outright **among contracts expiri
 - **Progress A and outcome Y** use the contracts the event actually holds (A6 and §2), so Y is the traded position's return.
 
 Missing settlements are never filled. A gap inside a drift window makes D undefined, and the event is invalid.
+
+## A9. Pilot data facts (data facts; pilot 2020-10-01 to 2021-01-29, no returns computed)
+
+From `reports/pilot_audit.md`, produced by `scripts/pilot_audit.py`:
+
+- **Settlement records.** CME publishes several settlement records per contract and trade date. The loader keeps the last record carrying the FINAL flag (bit 1) and excludes intraday settlements (bit 8), as Databento documents; `ts_ref` is not localized. CME also publishes a FINAL price of 0.0 for newly listed deferred contracts that have not traded yet (e.g. ESH2 and ZNU1 in Dec 2020). That 0.0 is a placeholder and is treated as no settlement. In the pilot, front contracts had a final settlement on every XNYS session (83/83 for each leg), published at a median of 19:13 ET and no later than 20:20 ET, which is always before the next session.
+- **Settlement clocks.** ES settlements sit closest to the 16:15 ET quote before 2020-10-26 and to the 16:00 ET quote after it. ZN settlements sit within half a tick of the 15:00 ET quote. Both match the frozen clocks.
+- **Quote and bar stamps.** `bbo-1m` records are stamped at the end of their minute, and a missing minute means no change. `ohlcv-1m` bars are stamped at the start of their minute. The PX fill "at 15:59 ET" is therefore the bid/ask state at 15:59:00 ET: the last `bbo-1m` record with `ts_recv` ≤ 15:59:00 ET, no more than 5 minutes stale. Otherwise there is no fill. The 2 pilot dates without a fresh quote are early closes, consistent with A2.
+- **Cost assumptions.** The front ES and ZN bid/ask spreads at 15:59 ET were 1 tick at the median and at the 95th percentile, which supports the frozen half-spread costs.
+- **Rolls.** The reference series switched ES on 2020-12-15 (before the 12-18 expiry) and ZN on 2020-11-25 (before its derived 11-27 first position day). The Nov-2020 event holds ESZ0/ZNH1 and the Dec-2020 event holds ESH1/ZNH1, as the frozen rules require.

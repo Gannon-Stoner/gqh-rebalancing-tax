@@ -1,0 +1,70 @@
+{
+  "quoted_at_utc": "2026-10-03T18:56:52+00:00",
+  "dataset": "GLBX.MDP3",
+  "symbols": [
+    "ES.FUT",
+    "ZN.FUT"
+  ],
+  "requests": [
+    {
+      "request": "pilot_definition",
+      "schema": "definition",
+      "start": "2020-10-01",
+      "end_exclusive": "2021-02-01",
+      "purpose": "contract metadata: ids, expirations, tick, multiplier",
+      "cost_usd": 0.0042,
+      "billable_bytes": 2671760,
+      "records": 5138
+    },
+    {
+      "request": "pilot_statistics",
+      "schema": "statistics",
+      "start": "2020-10-01",
+      "end_exclusive": "2021-02-01",
+      "purpose": "final settlements, open interest, cleared volume",
+      "cost_usd": 0.0099,
+      "billable_bytes": 10598480,
+      "records": 132481
+    },
+    {
+      "request": "pilot_bbo_1m",
+      "schema": "bbo-1m",
+      "start": "2020-10-01",
+      "end_exclusive": "2021-02-01",
+      "purpose": "1-minute best bid/offer: executable fills, clock checks",
+      "cost_usd": 0.9076,
+      "billable_bytes": 54142480,
+      "records": 676781
+    },
+    {
+      "request": "pilot_ohlcv_1m",
+      "schema": "ohlcv-1m",
+      "start": "2020-10-01",
+      "end_exclusive": "2021-02-01",
+      "purpose": "1-minute volume in execution windows (capacity)",
+      "cost_usd": 1.0833,
+      "billable_bytes": 16617104,
+      "records": 296734
+    },
+    {
+      "request": "is_definition",
+      "schema": "definition",
+      "start": "2010-06-06",
+      "end_exclusive": "2024-10-02",
+      "purpose": "full in-sample contract metadata",
+      "cost_usd": 0.2334,
+      "billable_bytes": 147444440,
+      "records": 283547
+    },
+    {
+      "request": "is_statistics",
+      "schema": "statistics",
+      "start": "2010-06-06",
+      "end_exclusive": "2024-10-02",
+      "purpose": "full in-sample settlements / OI / volume",
+      "cost_usd": 0.4604,
+      "billable_bytes": 494328640,
+      "records": 6179108
+    }
+  ]
+}

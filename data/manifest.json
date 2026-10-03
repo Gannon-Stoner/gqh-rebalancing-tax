@@ -1,0 +1,76 @@
+{
+  "pulls": [
+    {
+      "request": "pilot_definition",
+      "dataset": "GLBX.MDP3",
+      "symbols": [
+        "ES.FUT",
+        "ZN.FUT"
+      ],
+      "stype_in": "parent",
+      "schema": "definition",
+      "start": "2020-10-01",
+      "end": "2021-02-01",
+      "purpose": "contract metadata: ids, expirations, tick, multiplier",
+      "quoted_cost_usd": 0.0042,
+      "file": "data/raw/pilot_definition.dbn.zst",
+      "bytes": 25723,
+      "sha256": "f24dba2b785002196f437b159726851b65bf4751415d9b7a6d3ee464b9be6f44",
+      "pulled_at_utc": "2026-10-03T19:07:57+00:00"
+    },
+    {
+      "request": "pilot_statistics",
+      "dataset": "GLBX.MDP3",
+      "symbols": [
+        "ES.FUT",
+        "ZN.FUT"
+      ],
+      "stype_in": "parent",
+      "schema": "statistics",
+      "start": "2020-10-01",
+      "end": "2021-02-01",
+      "purpose": "final settlements, open interest, cleared volume",
+      "quoted_cost_usd": 0.0099,
+      "file": "data/raw/pilot_statistics.dbn.zst",
+      "bytes": 2999271,
+      "sha256": "51232d189514b950ee92ecdaffc890f7b959ec50545c349d29bcd648118a6e41",
+      "pulled_at_utc": "2026-10-03T19:08:22+00:00"
+    },
+    {
+      "request": "pilot_bbo_1m",
+      "dataset": "GLBX.MDP3",
+      "symbols": [
+        "ES.FUT",
+        "ZN.FUT"
+      ],
+      "stype_in": "parent",
+      "schema": "bbo-1m",
+      "start": "2020-10-01",
+      "end": "2021-02-01",
+      "purpose": "1-minute best bid/offer: executable fills, clock checks",
+      "quoted_cost_usd": 0.9076,
+      "file": "data/raw/pilot_bbo_1m.dbn.zst",
+      "bytes": 16597276,
+      "sha256": "4e96a0b3c4ad1b07cef14f487886c5d80794f2a0eb1912b63c4fb641ad428c05",
+      "pulled_at_utc": "2026-10-03T19:08:43+00:00"
+    },
+    {
+      "request": "pilot_ohlcv_1m",
+      "dataset": "GLBX.MDP3",
+      "symbols": [
+        "ES.FUT",
+        "ZN.FUT"
+      ],
+      "stype_in": "parent",
+      "schema": "ohlcv-1m",
+      "start": "2020-10-01",
+      "end": "2021-02-01",
+      "purpose": "1-minute volume in execution windows (capacity)",
+      "quoted_cost_usd": 1.0833,
+      "file": "data/raw/pilot_ohlcv_1m.dbn.zst",
+      "bytes": 3785007,
+      "sha256": "f51d25eae3535dd88b04cb7bc3d356a7b255b3a15632cfe7259d41d88774afe8",
+      "pulled_at_utc": "2026-10-03T19:08:56+00:00"
+    }
+  ]
+}
