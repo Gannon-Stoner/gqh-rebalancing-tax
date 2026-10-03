@@ -6,8 +6,9 @@ Databento dataset condition, 2010-06-06 to 2024-10-01: 4485 days, not 'available
 
 ## 0. Purchase
 
-- Files expected 32; in manifest 18; SHA-256 matches on disk 18; missing: ['is_bbo_1m_2011', 'is_bbo_1m_2012', 'is_bbo_1m_2013', 'is_bbo_1m_2014', 'is_bbo_1m_2015', 'is_bbo_1m_2016', 'is_bbo_1m_2017', 'is_bbo_1m_2018', 'is_bbo_1m_2019', 'is_bbo_1m_2020', 'is_bbo_1m_2021', 'is_bbo_1m_2022', 'is_bbo_1m_2023', 'is_bbo_1m_2024']
-- Quoted cost $46.85; 0.29 GB compressed
+- Streamed files expected 20, in manifest 20; missing: none
+- Batch jobs 1 (GLBX-20261003-5BNS8Q9CPN is_bbo_1m from 2013-01-01); batch files in manifest 142
+- SHA-256 matches on disk: 162 of 162; quoted cost $80.28; 0.81 GB compressed
 
 ## 1. Settlement coverage
 
@@ -65,7 +66,40 @@ Databento dataset condition, 2010-06-06 to 2024-10-01: 4485 days, not 'available
 - ZN reference contract, 2015-11-19 to 2024-10-01: volume ranking agrees with open interest on 2182/2226 sessions (98.0%)
 - ES event contract at L-8: volume ranking agrees with open interest on 106/106 events
 
-## 4-5. Minute data
+## 4. Minute data (outrights requested by exchange symbol, 14:00-16:30 ET extract)
 
-Not run (--settlements-only): bbo-1m still downloading.
+- Outrights alive in IS per definitions: 141 (ES 79, ZN 62); held or reference contracts: 117
+- bbo-1m: ids not in the outright definitions 0; outrights with no 14:00-16:30 record 15; of them held or reference: []
+  - records per year 7,264-1,750,989; stamped on a minute boundary 100.0%
+- ohlcv-1m: ids not in the outright definitions 0; outrights with no 14:00-16:30 record 19; of them held or reference: []
+  - records per year 464,495-923,048; stamped on a minute boundary 100.0%
+- Symbols reused across decades: 61; their held/reference contracts present in both files: 98/98
+
+## 5. Quotes at the 15:59 ET fill minute
+
+Front = reference contract of the session (A8). Regular sessions only (early closes have no 15:59 minute, A2).
+
+| Year | Regular sessions | ES fresh | ZN fresh | ES median spread (ticks) | ZN median spread (ticks) |
+|---|---|---|---|---|---|
+| 2010 | 144 | 144 | 143 | 1.0 | 1.0 |
+| 2011 | 251 | 251 | 251 | 1.0 | 1.0 |
+| 2012 | 247 | 247 | 247 | 1.0 | 1.0 |
+| 2013 | 249 | 249 | 249 | 1.0 | 1.0 |
+| 2014 | 245 | 243 | 244 | 1.0 | 1.0 |
+| 2015 | 250 | 250 | 250 | 1.0 | 1.0 |
+| 2016 | 251 | 251 | 251 | 1.0 | 1.0 |
+| 2017 | 249 | 249 | 249 | 1.0 | 1.0 |
+| 2018 | 248 | 248 | 248 | 1.0 | 1.0 |
+| 2019 | 249 | 249 | 249 | 1.0 | 1.0 |
+| 2020 | 249 | 249 | 249 | 1.0 | 1.0 |
+| 2021 | 251 | 251 | 251 | 1.0 | 1.0 |
+| 2022 | 250 | 250 | 250 | 1.0 | 1.0 |
+| 2023 | 248 | 248 | 248 | 1.0 | 1.0 |
+| 2024 | 188 | 188 | 188 | 1.0 | 1.0 |
+
+Held contracts on PX fill days: 159 usable PX-eligible IS events x 2 legs x (entry L-4, exit F1).
+
+- Fills without a fresh quote: 0
+- ES: spread median 1.0, 95th pct 1.0, max 2.0 ticks; 15:59 bar volume median 40,874, 10th pct 25,159, min 14,242 contracts
+- ZN: spread median 1.0, 95th pct 1.0, max 2.0 ticks; 15:59 bar volume median 1,190, 10th pct 94, min 0 contracts
 
