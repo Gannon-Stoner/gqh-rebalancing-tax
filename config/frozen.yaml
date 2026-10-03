@@ -1,0 +1,115 @@
+# Frozen constants for the pre-registered protocol (HYPOTHESIS.md §3-§5).
+# Any change after the `prereg-final` tag is a protocol breach and must be
+# disclosed in AMENDMENTS.md; bug fixes and data facts only.
+
+protocol: prereg-final
+seed: 20261003
+
+samples:
+  is_start: "2010-06-07"
+  is_end: "2024-10-01"
+  oos_start: "2024-10-02"
+  oos_end: "last available final settlement"
+  oos_unlock_tag: freeze-final          # loader refuses OOS dates before this tag exists
+
+data:
+  vendor: databento
+  dataset: GLBX.MDP3
+  parent_symbols: ["ES.FUT", "ZN.FUT"]
+  schemas: [definition, statistics, bbo-1m, ohlcv-1m]
+  settlement: "final SETTLEMENT_PRICE; last record per (instrument_id, ts_ref)"
+  factors: "Ken French daily FF3 + momentum"
+  commit_raw_data: false
+
+calendar:
+  session_rule: "CME trade dates with a final settlement for both ES and ZN and XNYS open"
+  L: "last qualifying session of the calendar month"
+  F1: "first qualifying session of the next month"
+  offsets: "L-k counts back over qualifying sessions"
+
+contracts:
+  ES: "highest open-interest outright at L-8"
+  ZN: "nearest outright whose first position day is after F1"
+  mid_event_roll: false
+  multiplier_usd_per_point: {ES: 50, ZN: 1000}
+  half_spread_usd_per_contract: {ES: 6.25, ZN: 7.8125}
+  fee_usd_per_contract_per_side: 2.50
+
+clocks_et:
+  zn_settlement: "14:59-15:00"
+  es_settlement_before_2020_10_26: "16:14:30-16:15:00"
+  es_settlement_from_2020_10_26: "15:59:30-16:00:00"
+  executable_fill_minute: "15:59"         # PX: both legs at bbo-1m bid/ask
+
+signal:
+  target_equity_weight: 0.60
+  drift: "D = 0.24*(R_E - R_B) / (1 + 0.6*R_E + 0.4*R_B), cumulative within-contract returns since previous L"
+  spread_return: "X = r_ES - r_ZN (log, 1:1 notional, within-contract), summed over the window"
+  ewma_lambda: 0.94                       # sigma_hat of daily X, data through the decision settle
+  dose: "min(|z|, 2), z = D / (0.24 * sigma_hat * sqrt(n)), n = sessions since previous L"
+  direction: "s = -sign(D)"
+  decision_session: "L-5"
+  progress_window: ["L-8", "L-5"]         # A = s * X(L-8 -> L-5) / (sigma_hat * sqrt(3))
+  entry_session: "L-4"
+  exit_session: "F1"                      # Y = s * X(L-4 -> F1) / (sigma_hat * sqrt(5))
+  progress_scale_sessions: 3
+  outcome_scale_sessions: 5
+
+sizing:
+  reference_nav_usd: 10000000
+  kappa: 0.0086603                        # 0.03 / sqrt(12): full-dose ex-ante 5-day risk per event, fraction of NAV
+  leg_notional: "(dose / 2) * kappa * NAV / (sigma_hat * sqrt(5))"
+  legs: equal_notional                    # 1:1 ES vs ZN notional
+  per_leg_cap_nav: 0.75
+  gross_cap_nav: 1.50
+  integer_contracts: true
+  intra_event_derisking: false            # disclosed; 2-sigma stop reported as a stress row only
+
+gate:
+  model: "Y = a + b*dose + c*A  (OLS)"
+  fit: "expanding window on completed past events only (exit before current decision)"
+  min_events: 60
+  freeze_coefficients_at: "is_end"
+  hurdle: "C = round-trip cost in units of position risk (cost_usd / (leg_notional * sigma_hat * sqrt(5)))"
+  rule: "trade iff Yhat > C; otherwise flat; never reverse"
+
+pseudo_events:
+  anchor: "L-14"
+  progress_window: ["L-17", "L-14"]
+  entry_session: "L-13"
+  exit_session: "L-8"
+
+variants:
+  PG: "P1 + remaining-return gate (PRIMARY)"
+  P0: "P1, always trades"
+  PD: "gate on dose only (c = 0)"
+  PE: "P0 scaled by PG's in-sample participation rate"
+  PX: "PG with executable 15:59 ET bid/ask fills"
+  PP: "PG applied to pseudo-events"
+primary: PG
+n_variants: 6
+
+costs:
+  multipliers_reported: [1.0, 2.0]
+  impact_sensitivity: {model: "Y * sigma_d * sqrt(Q / V)", Y: 1.0}
+
+inference:
+  unit: month
+  bootstrap: month_block
+  block_length_months: 3
+  draws: 9999
+  fallback: rademacher_wild
+  sensitivity: newey_west_lag3
+  alpha_one_sided: 0.05
+  multiple_testing: holm
+  confirmatory:
+    H1: "b > 0 in Y = a + b*dose + g*QE + e (in-sample events)"
+    H2: "c_E < 0 in stacked Y = a + a_E*ME + b*dose + b_E*ME*dose + c*A + c_E*ME*A + e (events and pseudo-events)"
+  mde_c_E_80pct_power: 0.27
+  synthetic_null: "AR(1)-GARCH(1,1)-t5"
+  size_check_band: [0.03, 0.07]
+  min_synthetic_panels: 500
+
+capacity:
+  participation_scenarios: [0.01, 0.05, 0.10]
+  volume_basis: "execution-window volume of the held contracts; binding leg reported"
