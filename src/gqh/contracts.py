@@ -119,7 +119,8 @@ class ContractPanel:
         meta["first_position_day"] = pd.to_datetime(meta["first_position_day"])
         order = list(meta.index)
         settle = df.pivot(index="date", columns="instrument_id", values="settle").reindex(columns=order)
-        oi = df.pivot(index="date", columns="instrument_id", values="open_interest").reindex(columns=order)
+        weight = "selection_weight" if "selection_weight" in df.columns else "open_interest"   # A14
+        oi = df.pivot(index="date", columns="instrument_id", values=weight).reindex(columns=order)
         return cls(root=root, settle=settle, oi=oi, meta=meta)
 
     # -- point lookups -----------------------------------------------------

@@ -15,10 +15,11 @@ Rules (HYPOTHESIS.md section 2, frozen.yaml ``data.settlement``):
 
 * Settlement = the last NEW ``SETTLEMENT_PRICE`` record per (instrument_id,
   trade date) whose flags include FINAL and exclude INTRADAY, ordered by
-  ``ts_recv`` then ``sequence``. A DELETE removes every earlier record of its
-  key. No final record means no settlement for that date (never a preliminary).
-  A final price of 0.0 (CME's placeholder for newly listed deferred contracts
-  that have not traded) is treated as no settlement.
+  ``ts_recv`` then ``sequence``; if no record of the key carries FINAL (the
+  pre-MDP 3.0 years, amendment A14), the last non-intraday record. A DELETE
+  removes every earlier record of its key. A price of 0.0 (CME's placeholder for
+  newly listed deferred contracts that have not traded) is treated as no
+  settlement.
 * Open interest and cleared volume = the last NEW record per (instrument_id,
   trade date), DELETE-aware; the value is the ``quantity`` field.
 * Outrights only: definition records with ``instrument_class == 'F'`` for the
@@ -73,15 +74,26 @@ def _apply_deletes(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def final_settlements(stats: pd.DataFrame) -> pd.DataFrame:
-    """Columns ``instrument_id, date, settle, settle_ts_recv, stat_flags``: one row per key."""
+    """Columns ``instrument_id, date, settle, settle_ts_recv, stat_flags, final_flag``: one row per key.
+
+    The last NEW non-intraday record with a positive price that carries the FINAL
+    flag; if no record of the key carries it, the last such record of any flag
+    (``final_flag`` False). Before CME's MDP 3.0 feed the FINAL flag is absent or
+    sparse (amendment A14), and the frozen rule is "last record per (instrument_id,
+    ts_ref)".
+    """
     df = _apply_deletes(_ordered(stats))
     df = df[(df["stat_type"] == SETTLEMENT_PRICE)
-            & (df["stat_flags"].astype(int) & FLAG_FINAL != 0)
             & (df["stat_flags"].astype(int) & FLAG_INTRADAY == 0)
             & df["price"].notna() & (df["price"] > 0)]  # newly listed deferreds carry 0.0 placeholders
-    last = df.groupby(["instrument_id", "date"], sort=False).tail(1)
+    key = ["instrument_id", "date"]
+    flagged = (df["stat_flags"].astype(int) & FLAG_FINAL) != 0
+    last_final = df[flagged].groupby(key, sort=False).tail(1).assign(final_flag=True)
+    last_any = df.groupby(key, sort=False).tail(1).assign(final_flag=False)
+    has_final = pd.MultiIndex.from_frame(last_any[key]).isin(pd.MultiIndex.from_frame(last_final[key]))
+    last = pd.concat([last_final, last_any[~has_final]], ignore_index=True)
     return (last.rename(columns={"price": "settle", "ts_recv": "settle_ts_recv"})
-                [["instrument_id", "date", "settle", "settle_ts_recv", "stat_flags"]]
+                [["instrument_id", "date", "settle", "settle_ts_recv", "stat_flags", "final_flag"]]
                 .sort_values(["date", "instrument_id"], ignore_index=True))
 
 
@@ -132,7 +144,7 @@ def build_settlement_panel(stats: pd.DataFrame, defs: pd.DataFrame, root: str, *
     """Long panel for ``gqh.contracts``: one row per (trade date, outright) with a final settle.
 
     Columns ``date, instrument_id, symbol, expiration, settle, open_interest,
-    cleared_volume, settle_ts_recv, tick, unit_qty``. ``open_interest`` and
+    cleared_volume, settle_ts_recv, final_flag, tick, unit_qty``. ``open_interest`` and
     ``cleared_volume`` are NaN where CME published none for that date.
     ``allow_oos=None`` follows the git tag; ``True`` requires the tag.
     """
@@ -149,7 +161,7 @@ def build_settlement_panel(stats: pd.DataFrame, defs: pd.DataFrame, root: str, *
     if not allow:
         panel = panel[panel["date"] < frozen_config().oos_start]
     cols = ["date", "instrument_id", "symbol", "expiration", "settle", "open_interest",
-            "cleared_volume", "settle_ts_recv", "tick", "unit_qty"]
+            "cleared_volume", "settle_ts_recv", "final_flag", "tick", "unit_qty"]
     return panel[cols].sort_values(["date", "expiration"], ignore_index=True)
 
 

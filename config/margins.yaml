@@ -1,0 +1,10 @@
+# CME maintenance margins per contract (USD), read from CME Group's public margin pages on 2026-10-03.
+# Used only for the capital ledger (margin-to-equity, variation-margin draws); not a strategy input.
+as_of: "2026-10-03"
+sources:
+  ES: "https://www.cmegroup.com/markets/equities/sp/e-mini-sandp500.margins.html"
+  ZN: "https://www.cmegroup.com/markets/interest-rates/us-treasury/10-year-us-treasury-note.margins.html"
+maintenance_usd:
+  ES: 26164      # E-mini S&P 500, 12/2026 contract, maintenance long (short: 23,377)
+  ZN: 1875       # 10Y Treasury Note, 09/2026-06/2027 contracts, maintenance
+note: "Exchange maintenance minimums; brokers set initial margin at or above these. Current levels, applied to all years."

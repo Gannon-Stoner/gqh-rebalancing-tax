@@ -1,0 +1,119 @@
+{
+  "queried_at_utc": "2026-10-03T19:42:43+00:00",
+  "dataset": "GLBX.MDP3",
+  "start_date": "2010-06-06",
+  "end_date": "2024-10-01",
+  "n_days": 4485,
+  "not_available": [
+    {
+      "date": "2014-06-11",
+      "condition": "degraded",
+      "last_modified_date": "2026-08-31"
+    },
+    {
+      "date": "2014-06-12",
+      "condition": "degraded",
+      "last_modified_date": "2026-08-31"
+    },
+    {
+      "date": "2014-06-13",
+      "condition": "degraded",
+      "last_modified_date": "2026-08-31"
+    },
+    {
+      "date": "2014-06-15",
+      "condition": "degraded",
+      "last_modified_date": "2026-08-30"
+    },
+    {
+      "date": "2014-09-22",
+      "condition": "degraded",
+      "last_modified_date": "2026-08-30"
+    },
+    {
+      "date": "2014-09-23",
+      "condition": "degraded",
+      "last_modified_date": "2026-08-30"
+    },
+    {
+      "date": "2014-09-24",
+      "condition": "degraded",
+      "last_modified_date": "2026-08-31"
+    },
+    {
+      "date": "2014-09-25",
+      "condition": "degraded",
+      "last_modified_date": "2026-08-31"
+    },
+    {
+      "date": "2017-11-13",
+      "condition": "degraded",
+      "last_modified_date": "2026-09-03"
+    },
+    {
+      "date": "2018-10-21",
+      "condition": "degraded",
+      "last_modified_date": "2026-08-20"
+    },
+    {
+      "date": "2019-01-15",
+      "condition": "degraded",
+      "last_modified_date": "2026-08-22"
+    },
+    {
+      "date": "2019-02-22",
+      "condition": "degraded",
+      "last_modified_date": "2026-08-30"
+    },
+    {
+      "date": "2019-03-13",
+      "condition": "degraded",
+      "last_modified_date": "2026-08-24"
+    },
+    {
+      "date": "2019-03-26",
+      "condition": "degraded",
+      "last_modified_date": "2026-08-23"
+    },
+    {
+      "date": "2020-02-27",
+      "condition": "degraded",
+      "last_modified_date": "2026-08-30"
+    },
+    {
+      "date": "2020-02-28",
+      "condition": "degraded",
+      "last_modified_date": "2026-09-01"
+    },
+    {
+      "date": "2020-05-05",
+      "condition": "degraded",
+      "last_modified_date": "2026-08-23"
+    },
+    {
+      "date": "2020-06-30",
+      "condition": "degraded",
+      "last_modified_date": "2026-08-23"
+    },
+    {
+      "date": "2020-07-01",
+      "condition": "degraded",
+      "last_modified_date": "2026-08-29"
+    },
+    {
+      "date": "2021-12-05",
+      "condition": "degraded",
+      "last_modified_date": "2026-09-01"
+    },
+    {
+      "date": "2022-01-02",
+      "condition": "degraded",
+      "last_modified_date": "2026-08-31"
+    },
+    {
+      "date": "2024-09-18",
+      "condition": "degraded",
+      "last_modified_date": "2026-08-29"
+    }
+  ]
+}

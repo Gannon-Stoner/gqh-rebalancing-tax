@@ -6,3 +6,7 @@ __pycache__/
 .venv/
 .pytest_cache/
 *.egg-info/
+data/derived/
+data/factors/*.zip
+data/factors/daily_factors.csv
+reports/*.log

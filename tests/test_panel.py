@@ -54,12 +54,21 @@ def test_final_settlement_beats_preliminary_and_later_preliminary():
     assert out.at[0, "date"] == pd.Timestamp("2020-12-16")   # ts_ref not localized to ET (would be 12-15)
 
 
-def test_no_final_means_no_settlement_and_intraday_is_excluded():
+def test_without_any_final_flag_the_last_record_is_used_and_intraday_never():
+    """Pre-MDP 3.0 records carry no FINAL flag (A14): the last record per key is the settlement."""
     s = _stats([
-        dict(ts_recv="2020-12-16 21:02", iid=1, ts_ref="2020-12-16", stat_type=SETTLE, flags=2, price=1.0, qty=0, action=1, seq=1),
-        dict(ts_recv="2020-12-17 15:00", iid=1, ts_ref="2020-12-17", stat_type=SETTLE, flags=1 | 8, price=2.0, qty=0, action=1, seq=2),
+        dict(ts_recv="2012-12-03 22:20", iid=1, ts_ref="2012-12-03", stat_type=SETTLE, flags=0, price=1.0, qty=0, action=1, seq=1),
+        dict(ts_recv="2012-12-04 00:04", iid=1, ts_ref="2012-12-03", stat_type=SETTLE, flags=0, price=1.5, qty=0, action=1, seq=2),
+        dict(ts_recv="2020-12-17 15:00", iid=1, ts_ref="2020-12-17", stat_type=SETTLE, flags=1 | 8, price=2.0, qty=0, action=1, seq=3),
+        dict(ts_recv="2012-12-04 22:20", iid=2, ts_ref="2012-12-04", stat_type=SETTLE, flags=1, price=7.0, qty=0, action=1, seq=4),
+        dict(ts_recv="2012-12-04 23:51", iid=2, ts_ref="2012-12-04", stat_type=SETTLE, flags=0, price=7.25, qty=0, action=1, seq=5),
     ])
-    assert P.final_settlements(s).empty
+    out = P.final_settlements(s).set_index(["instrument_id", "date"])
+    assert out.loc[(1, pd.Timestamp("2012-12-03")), "settle"] == 1.5
+    assert not out.loc[(1, pd.Timestamp("2012-12-03")), "final_flag"]
+    assert (1, pd.Timestamp("2020-12-17")) not in out.index              # intraday only: no settlement
+    assert out.loc[(2, pd.Timestamp("2012-12-04")), "settle"] == 7.0      # a flagged final beats later unflagged
+    assert out.loc[(2, pd.Timestamp("2012-12-04")), "final_flag"]
 
 
 def test_zero_placeholder_settlement_is_not_a_settlement():

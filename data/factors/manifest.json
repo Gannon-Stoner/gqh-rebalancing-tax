@@ -1,0 +1,27 @@
+{
+  "retrieved_at_utc": "2026-10-03T21:19:09+00:00",
+  "files": {
+    "ff3": {
+      "url": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_Factors_daily_CSV.zip",
+      "bytes": 178184,
+      "sha256": "2f29e22546069914890a712680a6f81f3680ebc3543b52864484d209ca13a7db"
+    },
+    "mom": {
+      "url": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Momentum_Factor_daily_CSV.zip",
+      "bytes": 85269,
+      "sha256": "ecf82b116e6ec56d2b79a2f27bd1d1598c217b5c6c25caa55b945bdd8a2c0b78"
+    }
+  },
+  "daily_factors": {
+    "rows": 26216,
+    "first": "1926-11-03",
+    "last": "2026-08-31",
+    "columns": [
+      "Mkt-RF",
+      "SMB",
+      "HML",
+      "RF",
+      "Mom"
+    ]
+  }
+}
