@@ -40,14 +40,28 @@ TICK = {"ES": 0.25, "ZN": 0.015625}
 
 def purchase_section() -> list[str]:
     man = json.loads((ROOT / "data" / "manifest.json").read_text())["pulls"]
-    expected = [s for n in ("is_definition", "is_statistics", "is_ohlcv_1m", "is_bbo_1m") for s, _, _ in download.chunks(n)]
-    rec = {e["request"]: e for e in man if e["request"] in expected}
-    sha_ok = sum(download._sha256(ROOT / e["file"]) == e["sha256"] for e in rec.values() if (ROOT / e["file"]).is_file())
+    jobs_path = ROOT / "data" / "batch_jobs.json"
+    jobs = json.loads(jobs_path.read_text())["jobs"] if jobs_path.is_file() else []
+    batch_start = {j["parent_request"]: pd.Timestamp(j["start"]) for j in jobs}
+    expected = []
+    for n in ("is_definition", "is_statistics", "is_ohlcv_1m", "is_bbo_1m"):
+        for stem, start, _ in download.chunks(n):   # streamed pieces, except those a batch job replaced
+            if n in batch_start and pd.Timestamp(start) >= batch_start[n]:
+                continue
+            expected.append(stem)
+    streamed = {e["request"]: e for e in man if e["request"] in expected}
+    batch = [e for e in man if e.get("job_id")]
+    ok = sum(download._sha256(ROOT / e["file"]) == e["sha256"]
+             for e in [*streamed.values(), *batch] if (ROOT / e["file"]).is_file())
+    cost = sum(e["quoted_cost_usd"] for e in streamed.values()) + sum(j["quoted_cost_usd"] for j in jobs)
+    size = sum(e["bytes"] for e in [*streamed.values(), *batch])
     return ["## 0. Purchase", "",
-            f"- Files expected {len(expected)}; in manifest {len(rec)}; SHA-256 matches on disk {sha_ok}; "
-            f"missing: {sorted(set(expected) - set(rec)) or 'none'}",
-            f"- Quoted cost ${sum(e['quoted_cost_usd'] for e in rec.values()):.2f}; "
-            f"{sum(e['bytes'] for e in rec.values()) / 1e9:.2f} GB compressed", ""]
+            f"- Streamed files expected {len(expected)}, in manifest {len(streamed)}; missing: "
+            f"{sorted(set(expected) - set(streamed)) or 'none'}",
+            f"- Batch jobs {len(jobs)} ({', '.join(j['job_id'] + ' ' + j['parent_request'] + ' from ' + j['start'][:10] for j in jobs) or 'none'}); "
+            f"batch files in manifest {len(batch)}",
+            f"- SHA-256 matches on disk: {ok} of {len(streamed) + len(batch)}; quoted cost ${cost:.2f}; "
+            f"{size / 1e9:.2f} GB compressed", ""]
 
 
 def settlement_section(stats: pd.DataFrame, panels: dict[str, pd.DataFrame]) -> list[str]:

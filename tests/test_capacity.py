@@ -23,7 +23,7 @@ def test_window_bars_follow_the_settlement_clocks():
 
 
 def test_capacity_scales_with_the_binding_leg_and_the_one_lot_test():
-    sig = pd.DataFrame({"es_id": [1, 1], "zn_id": [2, 2]})
+    sig = pd.DataFrame({"month": pd.PeriodIndex(["2021-03", "2021-04"], freq="M"), "es_id": [1, 1], "zn_id": [2, 2]})
     led = pd.DataFrame({"traded": [True, False], "month": pd.PeriodIndex(["2021-03", "2021-04"], freq="M"),
                         "entry": [T("2021-03-25"), T("2021-04-26")], "exit": [T("2021-04-01"), T("2021-05-03")],
                         "n_es": [10, 0], "n_zn": [20, 0]})

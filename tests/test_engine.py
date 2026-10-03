@@ -218,3 +218,17 @@ def test_px_missing_quotes_skip_entry_or_fall_back_at_exit(base):
     assert set(px2.loc[sig["valid"].to_numpy() & ~sized["below_one_lot"].to_numpy(), "reason"]) == {"px_ineligible"}
     with pytest.raises(ValueError):
         E.run_row(sig, sized, trade, row="PX", cfg=CFG, executable=True)
+
+
+def test_daily_pnl_and_replay_align_by_month_on_rolling_chains():
+    """A ledger filtered to a later segment must still use each event's own contracts."""
+    sess = xnys_sessions("2010-06-07", "2013-12-31")
+    es = ContractPanel.from_long(synth.synthetic_contract_chain(sess, root="ES", multiplier=50.0, seed=31), "ES")
+    zn = ContractPanel.from_long(synth.synthetic_contract_chain(sess, root="ZN", multiplier=1000.0, seed=32), "ZN")
+    sched = trading_schedule(SessionCalendar(sess))
+    sig = compute_signals(sched, reference_returns(es, zn, sess), es, zn, kind="event")
+    led = E.run_row(sig, E.size_events(sig, es, zn, cfg=CFG), sig["valid"].to_numpy(), row="P0", cfg=CFG)
+    assert sig.loc[led["traded"].to_numpy(), "es_id"].nunique() > 3           # several contracts are held
+    later = led[led["month"] >= pd.Period("2012-01", "M")]
+    daily = E.daily_pnl(later, sig, es, zn, sess, cfg=CFG)
+    assert daily["net"].sum() == pytest.approx(later["pnl"].sum(), abs=1e-6)

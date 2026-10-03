@@ -123,6 +123,7 @@ def rows_section(world: World, run: StrategyRun, volume: dict[int, pd.Series], *
                            "exit_fallbacks": int(px["px_exit_fallback"].sum())}
     rtt = realized_to_target(seg(run.ledgers[("PG", 1.0)]), cfg)
     out["realized_to_target_PG"] = {str(y): v for y, v in rtt.items()}
+    out["realized_to_target_PG_share_in_band"] = float(rtt.between(0.6, 1.5).mean()) if len(rtt) else None
     return out
 
 
@@ -157,6 +158,13 @@ def oos_section(world: World, *, cfg: FrozenConfig, draws: int) -> dict:
     return out
 
 
+def _stacked_records(world: World, samples: tuple[str, ...]) -> dict:
+    """Valid events (ME=1) and pseudo-events (ME=0) with dose, A, Y per sample, for figures and audits."""
+    st = stacked_panel(world.events[world.events["sample"].isin(samples)],
+                       world.pseudos[world.pseudos["sample"].isin(samples)])
+    return st.assign(month=st["month"].astype(str), QE=st["QE"].astype(int)).to_dict(orient="list")
+
+
 def evaluate(world: World, bbo: pd.DataFrame, ohlcv: pd.DataFrame, *, cfg: FrozenConfig | None = None,
              draws: int = 9999, samples: tuple[str, ...] = ("IS",), margins: dict | None = None,
              factors: pd.DataFrame | None = None) -> dict:
@@ -176,10 +184,12 @@ def evaluate(world: World, bbo: pd.DataFrame, ohlcv: pd.DataFrame, *, cfg: Froze
                                     if run.gates[g]["yhat"].notna().any() else None for g in ("PG", "PD", "PP")},
         "confirmatory": confirmatory(world, cfg=cfg, draws=draws),
         "oos_slopes": oos_section(world, cfg=cfg, draws=draws),
+        "stacked_panel": _stacked_records(world, samples),
     }
     for s in samples:
         res[f"rows_{s}"] = rows_section(world, run, volume, sample=s, cfg=cfg, draws=draws)
     res["diagnostics"] = diagnostics_section(world, run, QuoteBook(bbo), cfg=cfg)
+    res["backtrader_replay"] = backtrader_section(world, run, samples, cfg=cfg, margins=margins)
     for s in samples:
         months = segment_months(run, world.events, s)
         if len(months):
@@ -245,18 +255,43 @@ def risk_section(world: World, run: StrategyRun, months: pd.PeriodIndex, *, cfg:
             f = factors.join(world.ref["r_zn"].rename("ZN"), how="inner")
             block["factor_regression"] = R.factor_regression(t["ret"], t[["month", "entry", "exit"]], f)
         out[row] = block
+    # Stress table on the underlying trade: P0 over every valid event of the sample. Every row is flat before
+    # the walk-forward segment, which starts after the registered 2011-08 and 2015-08 stress months (A16).
+    from gqh.engine import run_row, size_events
+
+    ev = world.events
+    sample = ev.loc[ev["month"].isin(months), "sample"].iloc[0] if ev["month"].isin(months).any() else None
+    if sample is not None:
+        mask = ev["valid"].to_numpy() & (ev["sample"] == sample).to_numpy()
+        p0_all = run_row(ev, size_events(ev, world.es, world.zn, cfg=cfg), mask, row="P0-all", cfg=cfg)
+        out["stress_P0_all"] = R.stress_table(p0_all[p0_all["sample"] == sample], nav).to_dict(orient="records")
     # Square-root impact scenario for PG: σ_d = EWMA vol of each leg at the decision; V = traded volume on the entry day.
     pg = seg(run.ledgers[("PG", 1.0)])
     t = pg[pg["traded"]]
     if len(t):
         vol_es, vol_zn = ewma_sigma(world.ref["r_es"], cfg.ewma_lambda), ewma_sigma(world.ref["r_zn"], cfg.ewma_lambda)
-        ev = world.events.reset_index(drop=True)
+        evm = world.events.set_index("month")
         sig_d = pd.DataFrame({"ES": [vol_es.get(d, np.nan) for d in t["dec"]], "ZN": [vol_zn.get(d, np.nan) for d in t["dec"]]},
                              index=t.index)
         vmap = {leg: p.set_index(["date", "instrument_id"])["volume_1m"] if "volume_1m" in p.columns else None
                 for leg, p in (("ES", world.es_long), ("ZN", world.zn_long)) if p is not None}
         if vmap and all(v is not None for v in vmap.values()):
-            V = pd.DataFrame({leg: [float(vmap[leg].get((e, int(ev.loc[i, f"{leg.lower()}_id"])), np.nan))
-                                    for i, e in zip(t.index, t["entry"])] for leg in ("ES", "ZN")}, index=t.index)
+            V = pd.DataFrame({leg: [float(vmap[leg].get((e, int(evm.at[m, f"{leg.lower()}_id"])), np.nan))
+                                    for m, e in zip(t["month"], t["entry"])] for leg in ("ES", "ZN")}, index=t.index)
             out["impact_PG"] = R.sharpe_vs_nav(pg, months, sig_d, V, cfg=cfg).to_dict(orient="records")
+    return out
+
+
+def backtrader_section(world: World, run: StrategyRun, samples: tuple[str, ...], *, cfg: FrozenConfig,
+                       margins: dict | None = None) -> dict:
+    """Second engine: every traded P0 and PG event replayed in Backtrader at 1x and 2x costs (A15)."""
+    from gqh.bt_replay import reconciliation_summary, replay_ledger
+
+    out = {}
+    for row in ("P0", "PG"):
+        for k in cfg.cost_multipliers:
+            led = run.ledgers[(row, k)]
+            led = led[led["sample"].isin(samples)]
+            rep = replay_ledger(led, world.events, world.es, world.zn, world.sessions, k=k, margins=margins, cfg=cfg)
+            out[f"{row}@{k:g}x"] = reconciliation_summary(rep)
     return out

@@ -175,10 +175,71 @@ def pull(names: list[str]) -> None:
     print(f"{'TOTAL quoted this run':<22} ${total:7.2f}")
 
 
+def submit_batch(name: str, start: str) -> dict:
+    """Submit the rest of a request (from ``start`` to its end) as one Databento batch job (paid).
+
+    Streaming is throttled on Databento's side for long minute-data requests; a batch
+    job prepares monthly files server-side for a fast download. Recorded in
+    data/batch_jobs.json; files are fetched and hashed by :func:`fetch_batch`.
+    """
+    import databento as db
+
+    r = PLAN[name]
+    if not _oos_unlocked() and _utc(r.end) > PRE_FREEZE_LIMIT:
+        raise SystemExit("refusing to pull out-of-sample dates before freeze-final")
+    client = db.Historical(api_key())
+    kw = _kwargs(r, _utc(start).isoformat(), r.end)
+    quote = float(client.metadata.get_cost(**kw))
+    job = client.batch.submit_job(**kw, encoding="dbn", compression="zstd", split_duration="month")
+    jobs_path = ROOT / "data" / "batch_jobs.json"
+    jobs = json.loads(jobs_path.read_text()) if jobs_path.is_file() else {"jobs": []}
+    jobs["jobs"].append({"job_id": job["id"], "parent_request": name, "start": kw["start"], "end": kw["end"],
+                         "schema": r.schema, "stype_in": r.stype_in, "n_symbols": len(r.symbols),
+                         "quoted_cost_usd": round(quote, 4), "split_duration": "month",
+                         "submitted_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds")})
+    jobs_path.write_text(json.dumps(jobs, indent=2))
+    print(f"submitted {job['id']} for {name} {kw['start']}..{kw['end']}: quoted ${quote:.2f}")
+    return job
+
+
+def fetch_batch(job_id: str) -> list[Path]:
+    """Download a finished batch job to data/raw/batch/<job_id>/ and record every data file in the manifest."""
+    import databento as db
+
+    client = db.Historical(api_key())
+    out = ROOT / "data" / "raw" / "batch"
+    files = client.batch.download(job_id=job_id, output_dir=out)
+    jobs = json.loads((ROOT / "data" / "batch_jobs.json").read_text())["jobs"]
+    job = next(j for j in jobs if j["job_id"] == job_id)
+    manifest_path = ROOT / "data" / "manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    for f in sorted(Path(x) for x in files):
+        if not f.name.endswith(".dbn.zst"):
+            continue
+        stem = f"{job['parent_request']}_batch_{f.name.split('.')[0]}"
+        entry = {"request": stem, "parent_request": job["parent_request"], "job_id": job_id, "dataset": DATASET,
+                 "schema": job["schema"], "stype_in": job["stype_in"], "file": str(f.relative_to(ROOT)),
+                 "bytes": f.stat().st_size, "sha256": _sha256(f),
+                 "pulled_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+        manifest["pulls"] = [e for e in manifest["pulls"] if e["request"] != stem] + [entry]
+    manifest_path.write_text(json.dumps(manifest, indent=2))
+    print(f"fetched {len(files)} files for {job_id}")
+    return [Path(x) for x in files]
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--pull", choices=["pilot", "is"], help="download (paid); default is cost check only")
+    ap.add_argument("--batch-submit", metavar="REQUEST", help="submit REQUEST from --start to its end as a batch job (paid)")
+    ap.add_argument("--start", help="batch start (UTC date)")
+    ap.add_argument("--batch-fetch", metavar="JOB_ID", help="download a finished batch job")
     args = ap.parse_args()
+    if args.batch_submit:
+        submit_batch(args.batch_submit, args.start)
+        return
+    if args.batch_fetch:
+        fetch_batch(args.batch_fetch)
+        return
     if args.pull:
         pull([k for k in PLAN if k.startswith(args.pull + "_")])
         return

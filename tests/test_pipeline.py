@@ -54,7 +54,10 @@ def test_results_cover_the_registered_outputs(outputs):
     assert res["sample_counts"]["IS"]["valid_events"] == int(world.events["valid"].sum())
     assert res["oos_slopes"]["b"]["OOS"] is None and res["oos_slopes"]["b"]["mde_oos_at_24_months"] > 0
     risk = res["risk_IS"]
-    assert {"PG", "P0", "impact_PG"} <= set(risk) and len(risk["PG"]["stress"]) == 6
+    assert {"PG", "P0", "impact_PG", "stress_P0_all"} <= set(risk) and len(risk["PG"]["stress"]) == 6
+    stress = {r["period"]: r for r in risk["stress_P0_all"]}
+    assert stress["2011-08"]["events"] == 1                                 # before the walk-forward segment
+    assert stress["2022"]["events"] == 0                                    # outside this synthetic sample
     sharpe_by_nav = [r["sharpe"] for r in risk["impact_PG"]]
     assert all(a >= b for a, b in zip(sharpe_by_nav, sharpe_by_nav[1:]))     # impact only erodes with size
     assert set(res["diagnostics"]) == {"event_path_by_era", "legs_direction", "action_ledger_PG", "benchmark_clock"}

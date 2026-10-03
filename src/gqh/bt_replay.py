@@ -89,14 +89,14 @@ def replay_ledger(ledger: pd.DataFrame, signals: pd.DataFrame, es: ContractPanel
                   sessions: pd.DatetimeIndex, *, k: float = 1.0, margins: dict | None = None,
                   cfg: FrozenConfig | None = None) -> pd.DataFrame:
     """Per traded event: engine P&L, Backtrader P&L and their difference (USD)."""
-    sig = signals.reset_index(drop=True)
+    sig = signals.set_index("month")          # align by month, never by position
     rows = []
-    for i, t in ledger.reset_index(drop=True).iterrows():
+    for _, t in ledger.iterrows():
         if not t["traded"]:
             continue
         window = sessions[(sessions >= t["entry"]) & (sessions <= t["exit"])]
-        r = replay_event(int(t["q_es"]), int(t["q_zn"]), int(sig.at[i, "es_id"]), int(sig.at[i, "zn_id"]), window,
-                         es, zn, k=k, margins=margins, cfg=cfg)
+        r = replay_event(int(t["q_es"]), int(t["q_zn"]), int(sig.at[t["month"], "es_id"]),
+                         int(sig.at[t["month"], "zn_id"]), window, es, zn, k=k, margins=margins, cfg=cfg)
         rows.append({"month": t["month"], "engine_pnl": float(t["pnl"]), "backtrader_pnl": r["pnl"],
                      "diff": r["pnl"] - float(t["pnl"]), "fills": len(r["fills"])})
     return pd.DataFrame(rows)

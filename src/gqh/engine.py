@@ -230,11 +230,11 @@ def daily_pnl(ledger: pd.DataFrame, signals: pd.DataFrame, es: ContractPanel, zn
     sessions = pd.DatetimeIndex(sessions)
     gross = pd.Series(0.0, index=sessions)
     cost = pd.Series(0.0, index=sessions)
-    sig = signals.reset_index(drop=True)
-    for i, t in ledger.reset_index(drop=True).iterrows():
+    sig = signals.set_index("month")          # one row per month: align by month, never by position
+    for _, t in ledger.iterrows():
         if not t["traded"]:
             continue
-        r = sig.iloc[i]
+        r = sig.loc[t["month"]]
         window = sessions[(sessions >= t["entry"]) & (sessions <= t["exit"])]
         for leg, panel, iid in (("ES", es, int(r["es_id"])), ("ZN", zn, int(r["zn_id"]))):
             q = t[f"q_{leg.lower()}"] * cfg.multipliers[leg]

@@ -52,14 +52,23 @@ def close_window(paths: Iterable[Path], cols: list[str]) -> tuple[pd.DataFrame, 
     return out, counts, on_minute / max(total, 1)
 
 
+BBO_GLOBS = ("is_bbo_1m_*.dbn.zst", "batch/*/*.bbo-1m.dbn.zst")      # streamed years + batch-job months
+OHLCV_GLOBS = ("is_ohlcv_1m_*.dbn.zst", "batch/*/*.ohlcv-1m.dbn.zst")
+
+
+def _files(raw: Path, globs) -> list[Path]:
+    globs = (globs,) if isinstance(globs, str) else tuple(globs)
+    return sorted({f for g in globs for f in raw.glob(g)})
+
+
 def build_derived(raw: Path, derived: Path, *, stats: str = "is_statistics", defs: str = "is_definition",
-                  bbo_glob: str = "is_bbo_1m_*.dbn.zst", ohlcv_glob: str = "is_ohlcv_1m_*.dbn.zst") -> dict:
+                  bbo_glob=BBO_GLOBS, ohlcv_glob=OHLCV_GLOBS) -> dict:
     """Write the derived parquet files; returns record counts for the audit."""
     derived.mkdir(parents=True, exist_ok=True)
     st, df_ = _dbn(raw / f"{stats}.dbn.zst"), _dbn(raw / f"{defs}.dbn.zst")
     info: dict = {}
     last = {}
-    vol = daily_volume(sorted(raw.glob(ohlcv_glob)))
+    vol = daily_volume(_files(raw, ohlcv_glob))
     vol.to_parquet(derived / "daily_volume.parquet", index=False)
     for root in ("ES", "ZN"):
         p = add_selection_weight(build_settlement_panel(st, df_, root), vol)
@@ -67,7 +76,7 @@ def build_derived(raw: Path, derived: Path, *, stats: str = "is_statistics", def
         last[root] = p["date"].max()
     limit = None if oos_unlocked() else frozen_config().oos_start
     for name, glob, cols in (("bbo_1m_close", bbo_glob, BBO_COLS), ("ohlcv_1m_close", ohlcv_glob, OHLCV_COLS)):
-        frame, counts, on_min = close_window(sorted(raw.glob(glob)), cols)
+        frame, counts, on_min = close_window(_files(raw, glob), cols)
         if limit is not None:
             frame = frame[frame["ts_et"] < limit]
         frame.to_parquet(derived / f"{name}.parquet", index=False)

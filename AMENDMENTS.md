@@ -172,3 +172,16 @@ The in-sample statistics show two gaps before CME's MDP 3.0 feed (June 2010 to N
   - PX (minute quotes) is not replayed.
 - **Margins.** These are CME maintenance margins as published on 2026-10-03 (`config/margins.yaml`, with sources): ES $26,164 per contract (12/2026, long) and ZN $1,875. Today's levels are applied to every year, which overstates margin needs in earlier, lower-priced years.
 - **Factors.** Ken French daily Mkt-RF, SMB, HML and Mom were retrieved 2026-10-03 (`data/download_factors.py`; URLs and SHA-256 in `data/factors/manifest.json`). The ZN reference return is added as a factor. Dates after `is_end` stay hidden until `freeze-final`.
+
+## A16. Disclosure: partial unmasking during the masked dry run (2026-10-03, before `freeze-is`)
+
+Before tagging `freeze-is`, `scripts/masked_dry_run.py` ran the full pipeline on the real IS data to catch crashes and accounting errors without showing results. It ran twice: first with quotes for 2010–2012 only, then again after its output was reduced. It confirmed that every results section is produced and that Backtrader reproduces the engine on every replayed trade. It also revealed more than intended:
+
+- The number of PG trades in the IS walk-forward segment: 69, against 104 P0 trades. The PX "not selected" count gave the same figure.
+- **The sign of the headline results.** The list of undefined fields showed that "months needed for t = 2" is undefined for PG, which happens only when PG's IS Sharpe at 1× costs is ≤ 0. It is defined for P0, so P0's IS Sharpe is > 0.
+
+No magnitude, p-value, coefficient, confidence interval or other statistic was seen. Nothing in `HYPOTHESIS.md` or `config/frozen.yaml` can change. **No code, parameter or reporting choice is changed in response.** Any later change before `freeze-is` is a bug fix or a structural fix whose need is evident without results, and it is documented here with its reason.
+
+The dry-run script now prints only pass/fail checks: no gate-dependent counts and no list of undefined fields. The incident is logged in `trials.jsonl`, and the note discloses it under prior looks.
+
+**Stress table (structural fix, approved by the author 2026-10-03, after the disclosure above).** The registered stress months 2011-08 and 2015-08 fall before the common walk-forward segment, where every row is flat, so a stress table of the rows would show no position there. The stress table therefore reports the underlying trade: P0 on every valid IS event, sized and costed as frozen. The need for this is evident from the schedule alone, without results. It is descriptive and does not touch PG, the confirmatory tests or any reported row. The segment-limited stress tables of PG and P0 stay in `results_is.json`.

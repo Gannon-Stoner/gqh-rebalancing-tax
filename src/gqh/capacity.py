@@ -49,12 +49,12 @@ def capacity_table(ledger: pd.DataFrame, signals: pd.DataFrame, volume: dict[int
                    participation: tuple[float, ...] = PARTICIPATION, cfg: FrozenConfig | None = None) -> pd.DataFrame:
     """One row per traded event: window volumes, binding leg, max NAV per participation, 1-lot test at 1%."""
     cfg = cfg or frozen_config()
-    sig = signals.reset_index(drop=True)
+    sig = signals.set_index("month")          # align by month, never by position
     rows = []
-    for i, t in ledger.reset_index(drop=True).iterrows():
+    for _, t in ledger.iterrows():
         if not t["traded"]:
             continue
-        r = sig.iloc[i]
+        r = sig.loc[t["month"]]
         ratios, vols = {}, {}
         for leg, iid, n in (("ES", r["es_id"], t["n_es"]), ("ZN", r["zn_id"], t["n_zn"])):
             v = min(window_volume(volume, iid, leg, d, mode) for d in (t["entry"], t["exit"]))
@@ -73,7 +73,9 @@ def capacity_summary(table: pd.DataFrame, participation: tuple[float, ...] = PAR
     """Median and 10th-percentile max NAV per participation rate, binding-leg shares and the 1-lot test."""
     if table.empty:
         return {"events": 0}
-    out = {"events": int(len(table)), "binding_leg_share": table["binding_leg"].value_counts(normalize=True).to_dict(),
+    share = table["binding_leg"].value_counts(normalize=True)
+    out = {"events": int(len(table)), "binding_leg_share": share.to_dict(),
+           "binding_share_ES": float(share.get("ES", 0.0)), "binding_share_ZN": float(share.get("ZN", 0.0)),
            "lot_at_1pct_share": float(table["lot_at_1pct"].mean()),
            "median_window_volume": {"ES": float(table["vol_es"].median()), "ZN": float(table["vol_zn"].median())}}
     for p in participation:

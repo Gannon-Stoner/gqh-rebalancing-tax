@@ -1,0 +1,16 @@
+{
+  "jobs": [
+    {
+      "job_id": "GLBX-20261003-5BNS8Q9CPN",
+      "parent_request": "is_bbo_1m",
+      "start": "2013-01-01T00:00:00+00:00",
+      "end": "2024-10-02",
+      "schema": "bbo-1m",
+      "stype_in": "raw_symbol",
+      "n_symbols": 80,
+      "quoted_cost_usd": 28.8534,
+      "split_duration": "month",
+      "submitted_at_utc": "2026-10-03T21:23:27+00:00"
+    }
+  ]
+}
