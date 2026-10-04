@@ -15,6 +15,9 @@ gated on how much of the expected move has already happened before we can trade.
 
 ## For judges: check the note's headline numbers in about 5 minutes
 
+The market data is licensed, so the track rules forbid committing it; the repo ships the download
+scripts instead. Nothing here costs a judge money (see step 2).
+
 Python 3.11+. Clone with git rather than downloading a ZIP: the run guards check the protocol tags.
 
 ```bash
@@ -25,7 +28,9 @@ pip install -r requirements.txt && pip install -e .
 # 1. No data needed: 223 tests (timing, leakage, rolls, accounting, reproducibility)
 python -m pytest -q
 
-# 2. The Webull starter kit run: ~$0.83 of Databento data (settlements only), ~1 minute
+# 2. The Webull starter kit run: ~$0.83 of Databento data (settlements only), ~1 minute.
+#    Free: new Databento accounts get $125 in data credits (databento.com/pricing); hackathon
+#    teams also get Databento access through the event Discord.
 cp .env.example .env                          # put DATABENTO_API_KEY=... in .env
 python data/download.py --quote settlements   # free: shows the exact cost first
 python data/download.py --pull settlements    # IS + OOS definition/statistics for ES and ZN
@@ -45,7 +50,7 @@ file is not needed here because `data/selection_ranks.csv` holds each contract's
 (no volumes or prices), which picks the same contracts.
 
 **Everything else** (confirmatory tests, ΔSR intervals, PX quote fills, capacity, risk) needs the full
-Databento pull (about $92, ~4 GB; quote and minute files were bought as batch jobs):
+Databento pull (about $92, also inside the free $125 signup credit; ~4 GB; quote and minute files were bought as batch jobs):
 `python data/download.py --pull is && python data/download.py --pull oos && python -m gqh.reproduce --sample ALL`,
 which rewrites `results.json` byte-identically (see [Pipeline](#pipeline)).
 
