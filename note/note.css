@@ -26,3 +26,4 @@ code { font-size: 11pt; }
 .endbody { break-before: page; }
 table { break-inside: avoid; }
 h3 { break-after: avoid; }
+h2 { break-after: avoid; }
