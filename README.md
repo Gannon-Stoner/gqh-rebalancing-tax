@@ -13,6 +13,42 @@ gated on how much of the expected move has already happened before we can trade.
 - **One command rebuilds every number:** `python -m gqh.reproduce` writes `results_is.json`
   (or `results.json` with `--sample ALL`); two runs are byte-identical.
 
+## For judges: check the note's headline numbers in about 5 minutes
+
+Python 3.11+. Clone with git rather than downloading a ZIP: the run guards check the protocol tags.
+
+```bash
+git clone https://github.com/Gannon-Stoner/gqh-rebalancing-tax.git && cd gqh-rebalancing-tax
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt && pip install -e .
+
+# 1. No data needed: 223 tests (timing, leakage, rolls, accounting, reproducibility)
+python -m pytest -q
+
+# 2. The Webull starter kit run: ~$0.83 of Databento data (settlements only), ~1 minute
+cp .env.example .env                          # put DATABENTO_API_KEY=... in .env
+python data/download.py --quote settlements   # free: shows the exact cost first
+python data/download.py --pull settlements    # IS + OOS definition/statistics for ES and ZN
+python scripts/webull_backtest.py             # fetches the kit ZIP from the track page on first run
+```
+
+Step 2 runs PG (the strategy) and P0 (always trade) end to end in the track's Webull starter kit
+(its Backtrader Cerebro, analyzers, metric code and HTML report; amendment A21). The kit's Webull
+OpenAPI feed has no ES/ZN futures, so the same Databento settlements go in through `PandasData`. It
+prints, and checks against `results.json`, every IS and OOS number in the note's tables for both
+rows: trades, return, volatility, Sharpe, max drawdown, worst month. It exits with an error on any
+mismatch. Reports: `reports/webull_backtest.md` and `reports/webull_kit_{PG,P0}.html`. To use a kit
+you already unzipped: `WEBULL_KIT=/path/to/gqh-webull-backtrader-starter python scripts/webull_backtest.py`.
+
+Contract selection before CME published open interest (2010–2015, A14) uses minute-bar volume; that
+file is not needed here because `data/selection_ranks.csv` holds each contract's volume *rank* per day
+(no volumes or prices), which picks the same contracts.
+
+**Everything else** (confirmatory tests, ΔSR intervals, PX quote fills, capacity, risk) needs the full
+Databento pull (about $92, ~4 GB; quote and minute files were bought as batch jobs):
+`python data/download.py --pull is && python data/download.py --pull oos && python -m gqh.reproduce --sample ALL`,
+which rewrites `results.json` byte-identically (see [Pipeline](#pipeline)).
+
 ## Setup
 
 ```bash

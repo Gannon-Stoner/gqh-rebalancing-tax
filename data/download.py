@@ -6,6 +6,7 @@ Usage:
     python data/download.py --pull is     # download the full in-sample requests (paid; resumable)
     python data/download.py --quote oos   # cost check of the out-of-sample requests only (free)
     python data/download.py --pull oos    # out of sample, only after the freeze-final tag (paid)
+    python data/download.py --pull settlements  # IS + OOS definition/statistics only, ~$0.83: the Webull kit run
 
 The API key is read from DATABENTO_API_KEY (environment or the repo's .env file);
 it is never printed or written anywhere. Raw data goes to data/raw/ (git-ignored);
@@ -74,6 +75,9 @@ PLAN: dict[str, Request] = {
     "oos_bbo_1m": Request("bbo-1m", OOS_START, OOS_END_EXCL, "out-of-sample 1-minute best bid/offer, outrights only",
                           tuple(OUTRIGHTS), "raw_symbol", yearly=True),
 }
+
+# Settlements only (IS + OOS definition and statistics, about $0.83): all the Webull starter kit run needs
+SETTLEMENTS = ("is_definition", "is_statistics", "oos_definition", "oos_statistics")
 
 
 def api_key() -> str:
@@ -267,8 +271,8 @@ def fetch_batch(job_id: str) -> list[Path]:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--pull", choices=["pilot", "is", "oos"], help="download (paid); default is cost check only")
-    ap.add_argument("--quote", choices=["pilot", "is", "oos"], help="cost check of one group only (free)")
+    ap.add_argument("--pull", choices=["pilot", "is", "oos", "settlements"], help="download (paid); default is cost check only")
+    ap.add_argument("--quote", choices=["pilot", "is", "oos", "settlements"], help="cost check of one group only (free)")
     ap.add_argument("--batch-submit", metavar="REQUEST", help="submit REQUEST from --start to its end as a batch job (paid)")
     ap.add_argument("--start", help="batch start (UTC date)")
     ap.add_argument("--batch-fetch", metavar="JOB_ID", help="download a finished batch job")
@@ -284,10 +288,14 @@ def main() -> None:
     if args.batch_record:
         print(f"recorded {record_batch(args.batch_record, args.pulled_at)} data files for {args.batch_record}")
         return
+    if args.pull == "settlements":     # definition + statistics only: enough for scripts/webull_backtest.py
+        pull([k for k in SETTLEMENTS])
+        return
     if args.pull:
         pull([k for k in PLAN if k.startswith(args.pull + "_")])
         return
-    rows = (cost_check([k for k in PLAN if k.startswith(args.quote + "_")], out=f"cost_quotes_{args.quote}.json")
+    group = list(SETTLEMENTS) if args.quote == "settlements" else [k for k in PLAN if k.startswith(f"{args.quote}_")]
+    rows = (cost_check(group, out=f"cost_quotes_{args.quote}.json")
             if args.quote else cost_check())
     total = 0.0
     for r in rows:

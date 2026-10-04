@@ -13,7 +13,9 @@ the engine's; Backtrader does fills, commissions, margin and P&L), fills at the 
 script fails unless every reported number (return, vol, Sharpe 1x, max DD, worst month) equals
 ``results.json``. The frozen pipeline and ``results.json`` are not changed (amendment A21).
 
-    WEBULL_KIT=/path/to/gqh-webull-backtrader-starter python scripts/webull_backtest.py
+    python data/download.py --pull settlements    # once: ~$0.83 of Databento data (skip if data/derived exists)
+    python scripts/webull_backtest.py             # fetches the kit ZIP from the track page on first run
+    (WEBULL_KIT=/path/to/unzipped/kit uses a kit you already have)
     -> reports/webull_backtest.json, reports/webull_backtest.md, reports/webull_kit_{PG,P0}.html
 """
 
@@ -29,10 +31,34 @@ import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
-KIT = Path(os.environ.get("WEBULL_KIT", ROOT.parent / "gqh-webull-backtrader-starter")).expanduser()
-if not (KIT / "webull_bt").is_dir():
-    raise SystemExit(f"Webull starter kit not found at {KIT}: download the track's starter ZIP, unzip it and set "
-                     "WEBULL_KIT to its folder")
+sys.path.insert(0, str(ROOT / "src"))
+KIT_URL = "https://www.gqhacks.com/webull/gqh-webull-backtrader-starter.zip"   # the track page's "DOWNLOAD KIT .ZIP"
+
+
+def find_kit() -> Path:
+    """WEBULL_KIT if set; else the kit unzipped in .webull_kit/ (fetched once from the track page,
+    or from WEBULL_KIT_ZIP if that names a local copy of the ZIP)."""
+    if os.environ.get("WEBULL_KIT"):
+        kit = Path(os.environ["WEBULL_KIT"]).expanduser()
+    else:
+        cache = ROOT / ".webull_kit"
+        hits = [p.parent for p in cache.glob("**/webull_bt/__init__.py")]
+        if not hits:
+            import io
+            import urllib.request
+            import zipfile
+            src = os.environ.get("WEBULL_KIT_ZIP")
+            print(f"fetching the Webull starter kit from {src or KIT_URL}", flush=True)
+            data = Path(src).expanduser().read_bytes() if src else urllib.request.urlopen(KIT_URL, timeout=60).read()
+            zipfile.ZipFile(io.BytesIO(data)).extractall(cache)
+            hits = [p.parent for p in cache.glob("**/webull_bt/__init__.py")]
+        kit = hits[0].parent if hits else cache
+    if not (kit / "webull_bt").is_dir() or not (kit / "examples" / "backtest" / "main.py").is_file():
+        raise SystemExit(f"Webull starter kit not found at {kit}: set WEBULL_KIT to the unzipped kit folder")
+    return kit
+
+
+KIT = find_kit()
 sys.path[:0] = [str(KIT), str(KIT / "examples" / "backtest")]
 
 import backtrader as bt  # noqa: E402
@@ -42,7 +68,7 @@ from webull_bt.logging_utils import setup_logging  # noqa: E402
 from webull_bt.visualize import RecorderAnalyzer, render_report  # noqa: E402
 
 from gqh.config import frozen_config  # noqa: E402
-from gqh.data import load_derived  # noqa: E402
+from gqh.data import build_settlements_only  # noqa: E402
 from gqh.engine import side_cost  # noqa: E402
 from gqh.pipeline import _row_stats, prepare, segment_months  # noqa: E402
 from gqh.reproduce import load_margins  # noqa: E402
@@ -150,11 +176,28 @@ def run_row(row: str, led: pd.DataFrame, world, cfg, margins: dict, k: float = 1
     return strat, metrics, pnl
 
 
+def load_settlements() -> dict[str, pd.DataFrame]:
+    """Settlement panels: data/derived/ if the full pipeline has built it (unless GQH_SETTLEMENTS_ONLY=1),
+    else built from the settlements-only download (``python data/download.py --pull settlements``)."""
+    full = ROOT / "data" / "derived"
+    if os.environ.get("GQH_SETTLEMENTS_ONLY") != "1" and all((full / f"settlements_{r}.parquet").is_file()
+                                                              for r in ("ES", "ZN")):
+        return {r: pd.read_parquet(full / f"settlements_{r}.parquet") for r in ("ES", "ZN")}
+    raw = ROOT / "data" / "raw"
+    need = [raw / f"{s}.dbn.zst" for s in ("is_definition", "is_statistics", "oos_definition", "oos_statistics")]
+    missing = [p.name for p in need if not p.is_file()]
+    if missing:
+        raise SystemExit(f"missing {missing}: run `python data/download.py --pull settlements` (needs "
+                         "DATABENTO_API_KEY in .env; about $0.83)")
+    print("building settlement panels from definition + statistics (data/derived_settlements/)", flush=True)
+    return build_settlements_only(raw, ROOT / "data" / "derived_settlements", ROOT / "data" / "selection_ranks.csv")
+
+
 def main() -> None:
     setup_logging()
     cfg = frozen_config()
     results = json.loads((ROOT / "results.json").read_text())
-    panels, bbo, _ = load_derived(ROOT / "data" / "derived")
+    panels = load_settlements()
     world = prepare(panels, start=cfg.is_start, end=None, cfg=cfg)
     margins = load_margins(ROOT) or {"ES": 26164.0, "ZN": 1875.0}
     run = run_strategy(world.events, world.pseudos, world.es, world.zn, quote=None, cfg=cfg, cost_multipliers=(1.0,))

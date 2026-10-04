@@ -94,6 +94,27 @@ def build_derived(raw: Path, derived: Path, *, stats=STATS_FILES, defs=DEFS_FILE
     return info
 
 
+def build_settlements_only(raw: Path, derived: Path, ranks: Path) -> dict[str, pd.DataFrame]:
+    """Settlement panels from ``definition`` + ``statistics`` alone (about $0.83 of data), for the Webull kit run.
+
+    On dates without open interest (A14) the frozen ranking uses ohlcv-1m volume. Instead of those
+    files, ``ranks`` holds each contract's dense rank of that volume within its root and date (committed;
+    ranks only, no volumes), which orders contracts exactly as the volumes do. ``volume_1m`` in these
+    panels is therefore a rank, not a volume: use them for contract selection and settlements only.
+    """
+    derived.mkdir(parents=True, exist_ok=True)
+    st, df_ = _dbn_all(raw, STATS_FILES), _dbn_all(raw, DEFS_FILES)
+    rk = pd.read_csv(ranks, parse_dates=["date"])
+    out = {}
+    for root in ("ES", "ZN"):
+        p = build_settlement_panel(st, df_, root)
+        vol = rk.loc[rk["root"] == root, ["date", "instrument_id", "score"]].rename(columns={"score": "volume_1m"})
+        vol["instrument_id"] = vol["instrument_id"].astype(p["instrument_id"].dtype)
+        out[root] = add_selection_weight(p, vol)
+        out[root].to_parquet(derived / f"settlements_{root}.parquet", index=False)
+    return out
+
+
 def load_derived(derived: Path) -> tuple[dict[str, pd.DataFrame], pd.DataFrame, pd.DataFrame]:
     """(settlement panels, bbo extract, ohlcv extract)."""
     panels = {r: pd.read_parquet(derived / f"settlements_{r}.parquet") for r in ("ES", "ZN")}

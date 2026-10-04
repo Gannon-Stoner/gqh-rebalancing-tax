@@ -13,3 +13,5 @@ reports/*.log
 .idea/
 .DS_Store
 reports/webull_kit_*.html
+.webull_kit/
+data/derived_settlements/
