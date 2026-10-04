@@ -51,6 +51,9 @@ def render(template: str, res: dict) -> str:
 def main() -> None:
     res = json.loads(Path(sys.argv[1]).read_text())
     res["calibration"] = json.loads((ROOT / "reports" / "inference_calibration.json").read_text())
+    # IS-only diagnostics come from the one-time IS run: in an ALL run, diagnostics pool IS and OOS events (A20)
+    is_run = ROOT / "results_is.json"
+    res["is_run"] = json.loads(is_run.read_text()) if is_run.is_file() else res
     template = (NOTE / "note_template.md").read_text()
     if not res.get("rows_OOS", {}).get("months"):        # before freeze-final: drop the OOS block
         template = re.sub(r"<!--OOS-->.*?<!--/OOS-->", "", template, flags=re.S)

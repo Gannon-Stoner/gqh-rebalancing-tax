@@ -10,3 +10,6 @@ data/derived/
 data/factors/*.zip
 data/factors/daily_factors.csv
 reports/*.log
+.idea/
+.DS_Store
+reports/webull_kit_*.html

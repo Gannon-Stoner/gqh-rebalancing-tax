@@ -11,6 +11,18 @@
       "quoted_cost_usd": 28.8534,
       "split_duration": "month",
       "submitted_at_utc": "2026-10-03T21:23:27+00:00"
+    },
+    {
+      "job_id": "GLBX-20261004-SNWNBQG8VA",
+      "parent_request": "oos_bbo_1m",
+      "start": "2024-10-02T00:00:00+00:00",
+      "end": "2026-10-03T12:00:00Z",
+      "schema": "bbo-1m",
+      "stype_in": "raw_symbol",
+      "n_symbols": 80,
+      "quoted_cost_usd": 4.9203,
+      "split_duration": "month",
+      "submitted_at_utc": "2026-10-04T01:42:33+00:00"
     }
   ]
 }

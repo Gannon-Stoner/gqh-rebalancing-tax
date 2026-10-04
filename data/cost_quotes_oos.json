@@ -1,0 +1,54 @@
+{
+  "quoted_at_utc": "2026-10-04T01:33:52+00:00",
+  "dataset": "GLBX.MDP3",
+  "requests": [
+    {
+      "request": "oos_definition",
+      "schema": "definition",
+      "start": "2024-10-02",
+      "end_exclusive": "2026-10-03T12:00:00Z",
+      "purpose": "out-of-sample contract metadata",
+      "stype_in": "parent",
+      "n_symbols": 2,
+      "cost_usd": 0.0447,
+      "billable_bytes": 28252120,
+      "records": 54331
+    },
+    {
+      "request": "oos_statistics",
+      "schema": "statistics",
+      "start": "2024-10-02T06:00:00Z",
+      "end_exclusive": "2026-10-03T12:00:00Z",
+      "purpose": "out-of-sample settlements / OI / volume",
+      "stype_in": "parent",
+      "n_symbols": 2,
+      "cost_usd": 0.0915,
+      "billable_bytes": 98296800,
+      "records": 1228710
+    },
+    {
+      "request": "oos_ohlcv_1m",
+      "schema": "ohlcv-1m",
+      "start": "2024-10-02",
+      "end_exclusive": "2026-10-03T12:00:00Z",
+      "purpose": "out-of-sample 1-minute volume, outrights only",
+      "stype_in": "raw_symbol",
+      "n_symbols": 80,
+      "cost_usd": 6.3867,
+      "billable_bytes": 97966624,
+      "records": 1749404
+    },
+    {
+      "request": "oos_bbo_1m",
+      "schema": "bbo-1m",
+      "start": "2024-10-02",
+      "end_exclusive": "2026-10-03T12:00:00Z",
+      "purpose": "out-of-sample 1-minute best bid/offer, outrights only",
+      "stype_in": "raw_symbol",
+      "n_symbols": 80,
+      "cost_usd": 4.9203,
+      "billable_bytes": 293505360,
+      "records": 3668817
+    }
+  ]
+}

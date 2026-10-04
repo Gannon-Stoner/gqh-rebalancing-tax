@@ -219,3 +219,52 @@ The messages of the first nine commits were edited to remove a co-author trailer
   - The last complete event is Sep-2026, which exits at the 2026-10-01 settlement; the OOS sample is Oct-2024 to Sep-2026.
   - `gqh.data.build_derived` now concatenates the IS and OOS statistics and definitions files and includes OOS minute files.
   - With no OOS file present this changes nothing: rebuilding the derived data from the raw files with the new code reproduces `results_is.json` byte for byte. That is the change's test. The OOS guards are unchanged: no OOS request runs, and no OOS date loads, before the `freeze-final` tag.
+
+## A20. Out-of-sample data facts, a manifest bug fix, and note sourcing (data facts and clarification; 2026-10-03, after `freeze-final`, before the OOS evaluation)
+
+Written after the OOS files loaded and before `python -m gqh.reproduce --sample ALL` ran. Nothing under `src/` changed after `freeze-final`.
+
+- **Purchase.** The OOS requests of A19 were bought at the approved quote of $11.44:
+  - definitions, statistics and ohlcv-1m streamed ($6.52);
+  - bbo-1m bought as one Databento batch job, `GLBX-20261004-SNWNBQG8VA` ($4.92, 25 monthly files).
+
+  All 30 files (135 MB compressed) match their SHA-256 in `data/manifest.json`. Each batch file also matches the size and SHA-256 in the vendor's own batch manifest.
+- **Bug fix (data tooling): manifest race.** The stream pull read `data/manifest.json` once, at its start, and rewrote the file from that copy after each piece. It therefore dropped the 25 entries the batch fetch had written while the stream was still running; the files themselves were untouched.
+  - `data/download.py` now merges into the file on disk on every write.
+  - `--batch-record` re-recorded the 25 entries from disk, after checking each file against the vendor manifest, with the original fetch time. No data changed.
+- **Coverage** (`scripts/oos_coverage.py` → `reports/oos_coverage.md`; counts only, no returns):
+  - **Sessions.** 502 NYSE sessions from 2024-10-02 to 2026-10-02, each with an ES and a ZN settlement. Three settlements fall on days NYSE was closed and are excluded by the session rule: 2024-12-07 (a single stray record received on a Sunday), 2025-01-09 (national day of mourning) and 2026-04-03 (Good Friday).
+  - **Events.** The OOS months are Oct-2024 to Sep-2026. All 24 events and all 24 pseudo-events are usable. 22 events are PX-eligible: Dec-2024 and Dec-2025 enter on the Christmas Eve early close (A2). No OOS decision date shifts (A1).
+  - **No FINAL-flag settlement on seven vendor days.** The days are 2024-11-25, 2024-11-26, 2025-01-13, 2025-06-17, 2025-06-20, 2025-08-01 and 2026-10-02; the A14 last-record rule applies (138 ES and 30 ZN contract-days). In IS the last record matched the flagged final on 99.75–100% of contract-days where both exist. Held contracts are affected at:
+    - the Nov-2024 holding-period marks (L−3, L−2);
+    - the Jan-2025 pseudo entry (L−13);
+    - the Jun-2025 progress start (L−8, which is also that month's pseudo exit) and L−6;
+    - the Jul-2025 exit (F1, 2025-08-01).
+
+    2026-10-02 is outside every window.
+  - **Degraded days.** Databento flags 10 days as degraded; 5 of them are NYSE sessions: 2025-09-17, 2025-09-24 (Sep-2025 entry), 2025-11-28 (Nov-2025 L, an early close), 2026-03-16 and 2026-04-10 (Apr-2026 pseudo decision). Settlements and 15:59 ET quotes are present on all five.
+  - **Minute data.** All 18 held or reference contracts are in both minute files. The front contracts have a fresh 15:59 ET quote on every regular OOS session, and so does every PX fill. Spreads on PX fill days are 1 tick at the median, 95th percentile and maximum. The held ZN contract's 15:59 ET bar trades a median of 11,119 contracts (10th percentile 4,202, minimum 143).
+  - **Factors.** The Ken French daily factors end on 2026-08-31, so the OOS factor regression covers trading days through that date only.
+- **Note sourcing (clarification).** Several sections of an ALL run pool IS and OOS events: `diagnostics` (legs by direction, the benchmark-clock panel, the action ledger) and the stacked panel. The Backtrader replay covers trades from both samples. Therefore:
+  - the note's IS diagnostics paragraph reads `results_is.json`, the one-time IS run;
+  - its five figures stay as built from `results_is.json`, since `fig_key` would pool samples;
+  - OOS numbers come from `results.json`.
+
+  The IS-only sections of `results.json` (rows, confirmatory tests, risk, sample counts, segment, participation) must equal those of `results_is.json`. This is checked after the run and reported here.
+- **Post-run checks** (after the single OOS run on `7d7e2bf`, which wrote `results.json`, SHA-256 `ecc8c804…`):
+  - **IS sections unchanged.** The IS sections of `results.json` equal `results_is.json` value for value: protocol, segment, participation, confirmatory tests, IS rows, IS risk, inputs, IS sample counts, the IS rows of the stacked panel, and the 2010–15 and 2016–20 path eras. The 2021–24 path era gains one event, Sep-2024, whose path to F1+5 needs October 2024 sessions; the note uses the IS run's version.
+  - **Second engine.** Backtrader replays all 127 P0 and 85 PG trades (IS and OOS) to within $0.01 at both cost levels.
+  - **The largest OOS winner.** Jul-2025 exits on 2025-08-01, a day with no FINAL-flag settlement. The last-record settlements match the minute data: ES 6264.50 against a 15:59 ET bar close of 6263.50, and ZN 112.203125, equal to the 14:59 ET close. PX, which fills at the 15:59 ET quotes and uses no settlement, earns +$114,060 on that event against +$113,622 for PG.
+  - **P0 count.** P0 trades 23 of the 24 OOS events: Jul-2026's dose (0.03) sizes to zero contracts.
+  - **Known defect, not fixed** (the OOS run is not repeated). `risk.factor_regression` sums factor returns over each holding window, and an empty window sums to zero instead of being missing. The Ken French file ends on 2026-08-31, so the OOS factor regressions in `risk_OOS` include Sep-2026 (PG, P0) and part of Aug-2026 (P0) with zero factor returns after that date. The note does not use the OOS factor regression. The IS regression is unaffected, because the factors cover every IS date.
+  - **Reproduction.** A second run of the same code on the same data reproduces every value (scratch output; logged in `trials.jsonl`). Its provenance block differs only because another project's files reached `data/raw/batch/` after the official run (next item). Rebuilding the derived files from this project's raw files alone reproduces the official run's five derived-file hashes exactly, and this project's 196 manifest entries reproduce its manifest hash.
+  - **Files from another project.** At 22:14 ET, 17 seconds after the official run ended, a separate research session working in this checkout downloaded a Databento batch job of other contracts into `data/raw/batch/`: `universe_ohlcv_1m`, continuous NQ, RTY, YM, ZF, ZB, ZT, CL, GC, 6E and 6J, 2010–2024. It also recorded that job in `data/manifest.json` and `data/batch_jobs.json`. Those files and entries are not part of this project, and the official run predates them (file times; derived hashes above).
+- **Figures.** `scripts/build_figures.py` builds the IS figures from `results_is.json` (byte-identical to those committed with the IS results) and the two OOS figures (equity curve; PG P&L per event) from the OOS rows of `results.json`.
+
+## A21. Both rows run end to end in the Webull starter kit's harness (verification only; 2026-10-04, after the OOS run)
+
+- **What.** `scripts/webull_backtest.py` runs PG and P0 (1× costs, walk-forward segment, IS and OOS) as one continuous backtest each in the track's Webull starter kit (`gqh-webull-backtrader-starter`): its Backtrader Cerebro, the analyzers `examples/backtest/main.py` adds (DrawDown, TradeAnalyzer, SharpeRatio, RecorderAnalyzer), its `_compute_metrics` / `_print_results`, and its HTML report. The kit is not vendored; the script imports it from `WEBULL_KIT`.
+- **Feed.** The kit's `WebullData` feed serves Webull OpenAPI bars for US stocks and ETFs, not ES/ZN futures, so the runner feeds the same Databento settlements the engine uses through `bt.feeds.PandasData`, one feed per held contract, at a $10M NAV with CME maintenance margins.
+- **Division of labour.** Decisions, contracts and sizes come from the frozen engine's ledger; Backtrader does fills (at the settlement, cheat-on-close), commissions (the frozen per-side cost), margin and P&L. This verifies accounting and portfolio-level aggregation, not the signal.
+- **Result (2026-10-04).** No order rejected. PG 85/85 and P0 127/127 event P&Ls equal the engine's to $0.00. Pushing Backtrader's per-event P&L through the note's metric code reproduces trades, annual return, volatility, Sharpe (1×), maximum drawdown and worst month of both rows in both samples exactly (`reports/webull_backtest.md`). The kit's own daily-equity summary is reported there too; its daily-annualized Sharpe (PG 0.17, P0 0.13 over the whole segment) is a different estimator from the note's monthly one.
+- **Nothing changes.** The frozen pipeline, `results.json` and every number in the note are unchanged; this is an added check, written after the OOS result was known, and it cannot alter a decision.

@@ -1,0 +1,6 @@
+{
+  "spec": "SPEC.md",
+  "sha256": "d171a42e1be5761380234dff98d29c635e012a1287db7a5b9bf6a5128f76c6cc",
+  "locked_utc": "2026-10-04T00:25:28.732211+00:00",
+  "note": "Locked before any return computation in this directory."
+}

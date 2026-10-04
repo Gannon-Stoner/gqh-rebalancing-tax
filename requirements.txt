@@ -9,3 +9,7 @@ matplotlib==3.10.8
 databento==0.69.0
 pytest==8.4.2
 backtrader==1.9.78.123
+# Webull starter kit harness (scripts/webull_backtest.py), pinned as in the kit's uv.lock
+webull-openapi-python-sdk==3.0.0
+python-dotenv==1.2.3
+plotly==7.1.0

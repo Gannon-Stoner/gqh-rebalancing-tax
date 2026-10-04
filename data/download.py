@@ -179,8 +179,7 @@ def pull(names: list[str]) -> None:
                      "quoted_cost_usd": round(quote, 4), "file": str(path.relative_to(ROOT)),
                      "bytes": path.stat().st_size, "sha256": _sha256(path),
                      "pulled_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds")}
-            manifest["pulls"] = [e for e in manifest["pulls"] if e["request"] != stem] + [entry]
-            manifest_path.write_text(json.dumps(manifest, indent=2))   # after every piece: resumable
+            _record([entry])   # after every piece: resumable
             total += quote
             print(f"{stem:<22} ${quote:7.2f}  {entry['bytes'] / 1e6:9.1f} MB  sha256 {entry['sha256'][:12]}", flush=True)
     print(f"{'TOTAL quoted this run':<22} ${total:7.2f}")
@@ -213,28 +212,56 @@ def submit_batch(name: str, start: str) -> dict:
     return job
 
 
+def _record(entries: list[dict]) -> None:
+    """Merge entries into data/manifest.json by request name.
+
+    Every write starts from the file on disk, not from a copy read when the process
+    started: a stream pull and a batch fetch can run at the same time, and the old
+    read-once code let the pull drop the batch entries (A20). Written via a temporary
+    file and an atomic rename.
+    """
+    path = ROOT / "data" / "manifest.json"
+    manifest = json.loads(path.read_text()) if path.is_file() else {"pulls": []}
+    new = {e["request"] for e in entries}
+    manifest["pulls"] = [e for e in manifest["pulls"] if e["request"] not in new] + list(entries)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps(manifest, indent=2))
+    tmp.replace(path)
+
+
+def record_batch(job_id: str, pulled_at_utc: str | None = None) -> int:
+    """Record a downloaded batch job's data files in the manifest; returns the number recorded.
+
+    Each file's size and SHA-256 must match the vendor's own manifest.json in the job
+    folder. ``pulled_at_utc`` defaults to now (pass the original download time when
+    re-recording files already on disk).
+    """
+    job = next(j for j in json.loads((ROOT / "data" / "batch_jobs.json").read_text())["jobs"] if j["job_id"] == job_id)
+    folder = ROOT / "data" / "raw" / "batch" / job_id
+    vendor = {f["filename"]: f for f in json.loads((folder / "manifest.json").read_text())["files"]}
+    at = pulled_at_utc or datetime.now(timezone.utc).isoformat(timespec="seconds")
+    entries = []
+    for f in sorted(folder.glob("*.dbn.zst")):
+        digest, size = _sha256(f), f.stat().st_size
+        v = vendor.get(f.name)
+        if v is None or v["hash"] != f"sha256:{digest}" or v["size"] != size:
+            raise SystemExit(f"{f.name}: not in the vendor manifest, or its size or SHA-256 differs")
+        entries.append({"request": f"{job['parent_request']}_batch_{f.name.split('.')[0]}",
+                        "parent_request": job["parent_request"], "job_id": job_id, "dataset": DATASET,
+                        "schema": job["schema"], "stype_in": job["stype_in"], "file": str(f.relative_to(ROOT)),
+                        "bytes": size, "sha256": digest, "pulled_at_utc": at})
+    _record(entries)
+    return len(entries)
+
+
 def fetch_batch(job_id: str) -> list[Path]:
     """Download a finished batch job to data/raw/batch/<job_id>/ and record every data file in the manifest."""
     import databento as db
 
     client = db.Historical(api_key())
-    out = ROOT / "data" / "raw" / "batch"
-    files = client.batch.download(job_id=job_id, output_dir=out)
-    jobs = json.loads((ROOT / "data" / "batch_jobs.json").read_text())["jobs"]
-    job = next(j for j in jobs if j["job_id"] == job_id)
-    manifest_path = ROOT / "data" / "manifest.json"
-    manifest = json.loads(manifest_path.read_text())
-    for f in sorted(Path(x) for x in files):
-        if not f.name.endswith(".dbn.zst"):
-            continue
-        stem = f"{job['parent_request']}_batch_{f.name.split('.')[0]}"
-        entry = {"request": stem, "parent_request": job["parent_request"], "job_id": job_id, "dataset": DATASET,
-                 "schema": job["schema"], "stype_in": job["stype_in"], "file": str(f.relative_to(ROOT)),
-                 "bytes": f.stat().st_size, "sha256": _sha256(f),
-                 "pulled_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds")}
-        manifest["pulls"] = [e for e in manifest["pulls"] if e["request"] != stem] + [entry]
-    manifest_path.write_text(json.dumps(manifest, indent=2))
-    print(f"fetched {len(files)} files for {job_id}")
+    files = client.batch.download(job_id=job_id, output_dir=ROOT / "data" / "raw" / "batch")
+    n = record_batch(job_id)
+    print(f"fetched {len(files)} files for {job_id}; {n} data files recorded")
     return [Path(x) for x in files]
 
 
@@ -245,12 +272,17 @@ def main() -> None:
     ap.add_argument("--batch-submit", metavar="REQUEST", help="submit REQUEST from --start to its end as a batch job (paid)")
     ap.add_argument("--start", help="batch start (UTC date)")
     ap.add_argument("--batch-fetch", metavar="JOB_ID", help="download a finished batch job")
+    ap.add_argument("--batch-record", metavar="JOB_ID", help="re-record a downloaded batch job from disk (no network)")
+    ap.add_argument("--pulled-at", help="with --batch-record: the original download time (UTC ISO)")
     args = ap.parse_args()
     if args.batch_submit:
         submit_batch(args.batch_submit, args.start)
         return
     if args.batch_fetch:
         fetch_batch(args.batch_fetch)
+        return
+    if args.batch_record:
+        print(f"recorded {record_batch(args.batch_record, args.pulled_at)} data files for {args.batch_record}")
         return
     if args.pull:
         pull([k for k in PLAN if k.startswith(args.pull + "_")])

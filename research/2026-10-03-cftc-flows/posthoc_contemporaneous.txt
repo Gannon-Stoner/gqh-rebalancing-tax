@@ -1,0 +1,14 @@
+POST-HOC. Sample starts 2011-06 (daily_panel warm-up). Asset managers; HC1.
+ES ME D=0.840(t 2.01) n 160
+ES MID D=2.033(t 9.56) n 160
+ES ME D_pre=-0.010(t -0.04) R_win=0.755(t 7.93) n 160
+ES MID D_pre=0.959(t 3.87) R_win=0.665(t 11.24) n 160
+ES pooled ME x D_pre -0.969 (t -2.74) | ME x R_win 0.089 (t 0.80)
+
+ZN ME D=0.273(t 0.98) n 160
+ZN MID D=-1.142(t -3.81) n 160
+ZN ME D_pre=0.581(t 2.09) R_win=-0.135(t -1.45) n 160
+ZN MID D_pre=-0.812(t -1.95) R_win=-0.329(t -3.90) n 160
+ZN pooled ME x D_pre 1.393 (t 2.78) | ME x R_win 0.194 (t 1.55)
+
+Implied overlay AUM ~ 0.969 x median ES OI notional (post-hoc, order of magnitude only)

@@ -28,13 +28,15 @@ python -m pytest            # deterministic; no network, no market data
 cp .env.example .env                      # add DATABENTO_API_KEY=...
 python data/download.py                   # free cost check of every request
 python data/download.py --pull is         # in-sample: definitions, statistics, outright 1-minute bars/quotes
+python data/download.py --pull oos        # out of sample, only after the freeze-final tag (refused before it)
 python data/download_factors.py           # Ken French daily FF3 + momentum (public)
 python scripts/is_coverage.py             # data audit -> reports/is_coverage.md (aggregates only)
 ```
 
 Every downloaded file is recorded with its request and SHA-256 in `data/manifest.json`. The
-bbo-1m years from 2013 on were bought as one Databento batch job (`--batch-submit` / `--batch-fetch`,
-recorded in `data/batch_jobs.json`) because streaming was throttled; the data is identical.
+bbo-1m years from 2013 on, and the OOS bbo-1m, were bought as Databento batch jobs (`--batch-submit` / `--batch-fetch`,
+recorded in `data/batch_jobs.json`) because streaming was throttled; the data is identical. `--batch-record JOB`
+re-records a downloaded job from disk after checking every file against the vendor's own manifest.
 
 ## Pipeline
 
@@ -44,8 +46,10 @@ recorded in `data/batch_jobs.json`) because streaming was throttled; the data is
 | Masked plumbing run (no returns) | `python scripts/plumbing_run.py` | `reports/plumbing_p0.md`, `trials.jsonl` |
 | In-sample run (after `freeze-is`) | `python -m gqh.reproduce` | `results_is.json` |
 | Fresh-clone reproduction | `scripts/fresh_clone_check.sh` | byte-identical results check |
+| OOS data audit (after `freeze-final`) | `python scripts/oos_coverage.py` | `reports/oos_coverage.md` |
 | Out of sample (after `freeze-final`) | `python -m gqh.reproduce --sample ALL` | `results.json` |
-| Figures and note | `python -m gqh.report results.json && python scripts/render_note.py results.json` | `reports/figures/`, `note/note.pdf` |
+| Webull starter kit run (after `freeze-final`) | `WEBULL_KIT=/path/to/gqh-webull-backtrader-starter python scripts/webull_backtest.py` | `reports/webull_backtest.md` (PG/P0 in the kit's Backtrader harness; must equal `results.json`) |
+| Figures and note | `python scripts/build_figures.py && python scripts/render_note.py results.json` | `reports/figures/`, `note/note.pdf` |
 
 ## Layout
 
@@ -58,6 +62,7 @@ recorded in `data/batch_jobs.json`) because streaming was throttled; the data is
 | `src/gqh/gate.py`, `strategy.py`, `engine.py` | walk-forward gate, the six rows, contract-level P&L and fills |
 | `src/gqh/stats.py`, `metrics.py` | month-block bootstrap, Holm, DSR, ΔSR CIs; row metrics |
 | `src/gqh/risk.py`, `capacity.py`, `diagnostics.py` | stress, factors, margin, survival, impact; capacity; §6 diagnostics |
+| `scripts/webull_backtest.py` | PG and P0 run end to end in the Webull starter kit's harness (A21) |
 | `src/gqh/bt_replay.py` | second engine: every trade replayed in Backtrader (the Webull starter kit's engine) |
 | `src/gqh/pipeline.py`, `reproduce.py`, `report.py` | end-to-end run, one command, figures |
 | `tests/` | 220+ tests, including impulse timing, truncation/leakage, roll accounting, reproducibility |

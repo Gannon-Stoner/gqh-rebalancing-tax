@@ -1,0 +1,4 @@
+POST-HOC (not in SPEC.md): primary regression excluding calendar year 2020, HC1
+all              n=3346 Threshold -0.369 (t -2.20)  Cal*week4 -0.125 (t -1.25)
+ex_2020          n=3095 Threshold -0.165 (t -1.19)  Cal*week4 -0.143 (t -1.76)
+ex_Feb-Apr_2020  n=3295 Threshold -0.169 (t -1.29)  Cal*week4 -0.132 (t -1.74)

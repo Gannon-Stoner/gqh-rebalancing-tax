@@ -1,0 +1,184 @@
+{
+ "P0": {
+  "events": 127,
+  "events_matched_0.01usd": 127,
+  "kit_metrics": {
+   "final_value": 10219764.375,
+   "lost": 134,
+   "max_drawdown_money": 295762.8125,
+   "max_drawdown_pct": 2.930656197022726,
+   "net_pnl": 219764.375,
+   "pnl": 219764.375,
+   "pnl_pct": 2.19764375,
+   "sharpe_ratio": 0.13418968230743256,
+   "starting_value": 10000000.0,
+   "total_trades": 254,
+   "win_rate": 47.24409448818898,
+   "won": 120
+  },
+  "max_abs_event_diff_usd": 0.0,
+  "samples": {
+   "IS": {
+    "match": true,
+    "metrics": {
+     "ann_return": {
+      "backtrader": 0.002039166666666667,
+      "results_json": 0.002039166667
+     },
+     "ann_vol": {
+      "backtrader": 0.015228829041181642,
+      "results_json": 0.01522882904
+     },
+     "max_drawdown": {
+      "backtrader": 0.0222983125,
+      "results_json": 0.0222983125
+     },
+     "sharpe": {
+      "backtrader": 0.13390173736617395,
+      "results_json": 0.1339017374
+     },
+     "trades": {
+      "backtrader": 104,
+      "results_json": 104
+     },
+     "worst_month": {
+      "backtrader": -0.01166275,
+      "results_json": -0.01166275
+     }
+    },
+    "months": [
+     "2015-10",
+     "2024-09"
+    ]
+   },
+   "OOS": {
+    "match": true,
+    "metrics": {
+     "ann_return": {
+      "backtrader": 0.001811968749999999,
+      "results_json": 0.00181196875
+     },
+     "ann_vol": {
+      "backtrader": 0.01339486459327088,
+      "results_json": 0.01339486459
+     },
+     "max_drawdown": {
+      "backtrader": 0.0130076875,
+      "results_json": 0.0130076875
+     },
+     "sharpe": {
+      "backtrader": 0.13527339058808177,
+      "results_json": 0.1352733906
+     },
+     "trades": {
+      "backtrader": 23,
+      "results_json": 23
+     },
+     "worst_month": {
+      "backtrader": -0.006151125,
+      "results_json": -0.006151125
+     }
+    },
+    "months": [
+     "2024-10",
+     "2026-09"
+    ]
+   }
+  },
+  "total_pnl_usd": {
+   "backtrader": 219764.375,
+   "engine": 219764.375
+  }
+ },
+ "PG": {
+  "events": 85,
+  "events_matched_0.01usd": 85,
+  "kit_metrics": {
+   "final_value": 10163746.875,
+   "lost": 86,
+   "max_drawdown_money": 254828.125,
+   "max_drawdown_pct": 2.526126332648196,
+   "net_pnl": 163746.875,
+   "pnl": 163746.875,
+   "pnl_pct": 1.6374687499999998,
+   "sharpe_ratio": 0.1673469118246815,
+   "starting_value": 10000000.0,
+   "total_trades": 170,
+   "win_rate": 49.411764705882355,
+   "won": 84
+  },
+  "max_abs_event_diff_usd": 0.0,
+  "samples": {
+   "IS": {
+    "match": true,
+    "metrics": {
+     "ann_return": {
+      "backtrader": -0.0004108749999999999,
+      "results_json": -0.000410875
+     },
+     "ann_vol": {
+      "backtrader": 0.008729311198895098,
+      "results_json": 0.008729311199
+     },
+     "max_drawdown": {
+      "backtrader": 0.025455250000000002,
+      "results_json": 0.02545525
+     },
+     "sharpe": {
+      "backtrader": -0.04706843308003567,
+      "results_json": -0.04706843308
+     },
+     "trades": {
+      "backtrader": 69,
+      "results_json": 69
+     },
+     "worst_month": {
+      "backtrader": -0.01166275,
+      "results_json": -0.01166275
+     }
+    },
+    "months": [
+     "2015-10",
+     "2024-09"
+    ]
+   },
+   "OOS": {
+    "match": true,
+    "metrics": {
+     "ann_return": {
+      "backtrader": 0.010036281250000001,
+      "results_json": 0.01003628125
+     },
+     "ann_vol": {
+      "backtrader": 0.011069521374101114,
+      "results_json": 0.01106952137
+     },
+     "max_drawdown": {
+      "backtrader": 0.003503125,
+      "results_json": 0.003503125
+     },
+     "sharpe": {
+      "backtrader": 0.9066590063669291,
+      "results_json": 0.9066590064
+     },
+     "trades": {
+      "backtrader": 16,
+      "results_json": 16
+     },
+     "worst_month": {
+      "backtrader": -0.003487875,
+      "results_json": -0.003487875
+     }
+    },
+    "months": [
+     "2024-10",
+     "2026-09"
+    ]
+   }
+  },
+  "total_pnl_usd": {
+   "backtrader": 163746.875,
+   "engine": 163746.875
+  }
+ }
+}
