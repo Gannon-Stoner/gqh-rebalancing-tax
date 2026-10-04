@@ -69,8 +69,10 @@ def main() -> None:
     if markers and "--draft" not in sys.argv:
         raise SystemExit(f"unfinished text markers remain: {markers[:3]}")
     md = re.sub(r"\[\[([^\]]*)\]\]", r'<span style="background:#fff2cc">[pending: \1]</span>', md)
+    md = re.sub(r"(?<![\w.\-/])-(?=\d)", "\u2212", md)   # typographic minus for negative numbers (not dates/paths)
     (NOTE / "note.md").write_text(md)
     subprocess.run(["pandoc", str(NOTE / "note.md"), "-o", str(NOTE / "note.html"), "--standalone", "--embed-resources",
+                    "--from", "markdown-tex_math_dollars+tex_math_single_backslash", "--mathml",   # \( \) math; $ is money
                     "--css", "note.css", "--metadata", "title=Paying for what is left", "--resource-path", str(ROOT)],
                    check=True, cwd=NOTE)
     subprocess.run([CHROME, "--headless", "--disable-gpu", "--no-pdf-header-footer",

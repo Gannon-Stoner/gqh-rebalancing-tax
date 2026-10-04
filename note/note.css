@@ -1,7 +1,7 @@
 @page { size: Letter; margin: 1in 1in 1in 1in; }
 :root { --ink: #1a1a1a; --muted: #444; --rule: #c9c9c9; --accent: #1f4e79; }
 html { font-size: 11pt; }
-body { font-family: "Charter", "Georgia", serif; color: var(--ink); background: #fff; line-height: 1.22;
+body { font-family: "Charter", "Georgia", serif; color: var(--ink); background: #fff; line-height: 1.17;
        max-width: none; margin: 0; padding: 0; }
 header#title-block-header { display: none; }
 h1 { font-size: 15pt; line-height: 1.15; margin: 0 0 3pt 0; color: var(--accent); }
@@ -26,4 +26,8 @@ code { font-size: 11pt; }
 .endbody { break-before: page; }
 table { break-inside: avoid; }
 h3 { break-after: avoid; }
-h2 { break-after: avoid; }
+math { font-family: "STIX Two Math", "Cambria Math", math; font-size: 1.04em; }
+math[display="block"] { margin: 1pt 0 2pt 0; }
+em { font-style: italic; }
+.row > figure img { width: 92%; display: block; margin: 0 auto; }
+p, li { orphans: 2; widows: 2; }

@@ -48,7 +48,7 @@ def fig_key(res: dict, out: Path) -> Path:
     ax.axhline(0, color="black", lw=0.5)
     ax.set_xlabel("pre-entry progress A (σ units, signed toward the flow)")
     ax.set_ylabel("remaining return Y (σ units)")
-    ax.legend(frameon=False, loc="lower left", fontsize=6.5)
+    ax.legend(frameon=False, ncol=2, loc="upper center", bbox_to_anchor=(0.5, -0.22), fontsize=7)
     ax.set_title("Remaining return vs progress (bin means, 90% CI)")
     return _save(fig, out)
 
@@ -68,7 +68,11 @@ def fig_equity(res: dict, out: Path, sample: str = "IS") -> Path:
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
     ax.set_ylabel("cumulative net return, % of NAV")
     ax.set_title(f"Strategy rows, {sample} {sec['months'][0]} to {sec['months'][1]} (1x costs)")
-    ax.legend(frameon=False, ncol=3, loc="upper left")
+    h, lab = ax.get_legend_handles_labels()                      # legend below the axes: never covers a line
+    order = [lab.index(r) for r in ("PG", "P0", "PD", "PE", "PX", "PP") if r in lab]
+    ax.legend([h[i] for i in order], [lab[i] for i in order], frameon=False, ncol=6, loc="upper center",
+              bbox_to_anchor=(0.5, -0.12), handlelength=1.8, columnspacing=1.0)
+    ax.set_title(f"Strategy rows, {sample} {sec['months'][0]} to {sec['months'][1]} (1× costs)")
     return _save(fig, out)
 
 
