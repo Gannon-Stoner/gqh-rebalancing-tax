@@ -24,3 +24,5 @@ figcaption { font-size: 11pt; color: var(--muted); margin-top: 1pt; line-height:
 code { font-size: 11pt; }
 .pagebreak { break-before: page; }
 .endbody { break-before: page; }
+table { break-inside: avoid; }
+h3 { break-after: avoid; }

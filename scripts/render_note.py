@@ -54,6 +54,13 @@ def main() -> None:
     # IS-only diagnostics come from the one-time IS run: in an ALL run, diagnostics pool IS and OOS events (A20)
     is_run = ROOT / "results_is.json"
     res["is_run"] = json.loads(is_run.read_text()) if is_run.is_file() else res
+    # position sizes and the worst event, from the committed PG trade ledger (data/replay/, A21)
+    import csv
+    led = [r for r in csv.DictReader((ROOT / "data" / "replay" / "ledger_PG.csv").open()) if r["traded"] == "True"]
+    leg = sorted(float(r["gross_nav"]) / 2 for r in led)            # equal-notional legs: ES leg = gross / 2
+    res["pg_size"] = {"es_leg_median": leg[len(leg) // 2], "es_leg_max": leg[-1],
+                      "crash_loss_median": 0.20 * leg[len(leg) // 2], "crash_loss_max": 0.20 * leg[-1],
+                      "worst_event_usd": min(float(r["pnl"]) for r in led)}
     template = (NOTE / "note_template.md").read_text()
     if not res.get("rows_OOS", {}).get("months"):        # before freeze-final: drop the OOS block
         template = re.sub(r"<!--OOS-->.*?<!--/OOS-->", "", template, flags=re.S)
