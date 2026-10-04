@@ -1,0 +1,32 @@
+{
+  "completed_utc": "2026-10-03T23:11:16.924341+00:00",
+  "scope": "All new work is exploratory, using only IS through 2024-10-01. Original future-period data not opened.",
+  "git_head": "3aaa2bb11a6a0e4ab2665782892c16e8d4285435",
+  "tags": [
+    "freeze-is",
+    "prereg-final"
+  ],
+  "protected_file_sha256": {
+    "HYPOTHESIS.md": "3065cdc1a432c40d5339837985a37500a4659ff89e6ce1bd7c49d0d58f682b89",
+    "config/frozen.yaml": "0eede8ec46f7985ad5ee335dec26e2f8e227c74affd97edccdf1acd0a6366dbe",
+    "AMENDMENTS.md": "b8b03e8c0061a85ea4e1a2d5e9b00ccfc9698d14600a221387d2114d9e333d5f",
+    "results_is.json": "3a923e7ef5a06a9c676dfe5d60e459ada0a968dc806e07d3944a55c77d7e89c0",
+    "trials.jsonl": "ee82beba498808b0baaaa94192cce9fd47ef895a82819e77ed8abc015137e1eb"
+  },
+  "verification": [
+    "Independent baseline P0 and PG dollar reconciliation",
+    "Independent actual-quote corroboration of F1 increment",
+    "121 targeted existing tests passed, 1 skipped",
+    "Independent original-gate implementation reproduced exit-L refit: 104/104 trades, all dollars match",
+    "Root model predictions reconstructed original PG monthly returns exactly",
+    "108 calendar months retained in every candidate series",
+    "Full 66-series search inventory, 57 distinct return series",
+    "All report relative references resolve; two figures embedded; evidence figure visually inspected"
+  ],
+  "limitations": [
+    "HTML browser preview was unavailable because the browser policy does not permit file URLs; source and links checked, plots visually inspected.",
+    "No prospective OOS evaluation; all candidate findings are exploratory.",
+    "No new endpoint-specific full market-impact/capacity certification.",
+    "Deletion sensitivity holds historical decisions fixed; it is not a retraining simulation."
+  ]
+}

@@ -1,0 +1,332 @@
+{
+  "positive_return_family_18": {
+    "event_original_ols": {
+      "mean_monthly": -3.423958333e-05,
+      "ci90_mean_monthly": [
+        -0.0003671617477,
+        0.0003120171296
+      ],
+      "p_positive_raw": 0.5718,
+      "p_positive_max_t_family": 0.9959
+    },
+    "event_original_ridge": {
+      "mean_monthly": 6.075752315e-05,
+      "ci90_mean_monthly": [
+        -0.000296029456,
+        0.0004430576968
+      ],
+      "p_positive_raw": 0.3949,
+      "p_positive_max_t_family": 0.9701
+    },
+    "event_direction_interactions": {
+      "mean_monthly": 0.0002630393519,
+      "ci90_mean_monthly": [
+        -0.0001360815394,
+        0.000715619213
+      ],
+      "p_positive_raw": 0.1544,
+      "p_positive_max_t_family": 0.7429
+    },
+    "event_quarter_interactions": {
+      "mean_monthly": 0.0004393055556,
+      "ci90_mean_monthly": [
+        3.076822917e-05,
+        0.0009416700231
+      ],
+      "p_positive_raw": 0.0694,
+      "p_positive_max_t_family": 0.3734
+    },
+    "event_volatility_interactions": {
+      "mean_monthly": 4.500520833e-05,
+      "ci90_mean_monthly": [
+        -0.000354858044,
+        0.0004799752894
+      ],
+      "p_positive_raw": 0.4157,
+      "p_positive_max_t_family": 0.979
+    },
+    "event_correlation_interactions": {
+      "mean_monthly": -0.0002108078704,
+      "ci90_mean_monthly": [
+        -0.0005071031829,
+        8.518686343e-05
+      ],
+      "p_positive_raw": 0.8826,
+      "p_positive_max_t_family": 1.0
+    },
+    "event_nonlinear_shape": {
+      "mean_monthly": 0.0002347540509,
+      "ci90_mean_monthly": [
+        -0.0002156463542,
+        0.0007551945602
+      ],
+      "p_positive_raw": 0.2141,
+      "p_positive_max_t_family": 0.8464
+    },
+    "event_common_market_move": {
+      "mean_monthly": 0.0002879947917,
+      "ci90_mean_monthly": [
+        -0.0001184295139,
+        0.0007486770833
+      ],
+      "p_positive_raw": 0.1399,
+      "p_positive_max_t_family": 0.6997
+    },
+    "event_combined": {
+      "mean_monthly": 8.472222222e-05,
+      "ci90_mean_monthly": [
+        -0.0003199750579,
+        0.0005390637731
+      ],
+      "p_positive_raw": 0.3552,
+      "p_positive_max_t_family": 0.9647
+    },
+    "pseudo_original_ols": {
+      "mean_monthly": -0.0001122146991,
+      "ci90_mean_monthly": [
+        -0.0002781104745,
+        1.754282407e-05
+      ],
+      "p_positive_raw": 0.8836,
+      "p_positive_max_t_family": 1.0
+    },
+    "pseudo_original_ridge": {
+      "mean_monthly": -3.194039352e-05,
+      "ci90_mean_monthly": [
+        -0.0001222730324,
+        3.94994213e-05
+      ],
+      "p_positive_raw": 0.7615,
+      "p_positive_max_t_family": 0.9998
+    },
+    "pseudo_direction_interactions": {
+      "mean_monthly": -8.468344907e-05,
+      "ci90_mean_monthly": [
+        -0.0003957784722,
+        0.0002254489583
+      ],
+      "p_positive_raw": 0.6737,
+      "p_positive_max_t_family": 0.9995
+    },
+    "pseudo_quarter_interactions": {
+      "mean_monthly": -0.0002522471065,
+      "ci90_mean_monthly": [
+        -0.0005146563079,
+        -1.42353588e-05
+      ],
+      "p_positive_raw": 0.9438,
+      "p_positive_max_t_family": 1.0
+    },
+    "pseudo_volatility_interactions": {
+      "mean_monthly": -3.6125e-05,
+      "ci90_mean_monthly": [
+        -0.0001375920718,
+        5.378506944e-05
+      ],
+      "p_positive_raw": 0.7473,
+      "p_positive_max_t_family": 0.9998
+    },
+    "pseudo_correlation_interactions": {
+      "mean_monthly": -0.00015278125,
+      "ci90_mean_monthly": [
+        -0.0003325334491,
+        -1.238587963e-05
+      ],
+      "p_positive_raw": 0.9257,
+      "p_positive_max_t_family": 1.0
+    },
+    "pseudo_nonlinear_shape": {
+      "mean_monthly": -0.0001838819444,
+      "ci90_mean_monthly": [
+        -0.0004023698495,
+        3.492650463e-06
+      ],
+      "p_positive_raw": 0.92,
+      "p_positive_max_t_family": 1.0
+    },
+    "pseudo_common_market_move": {
+      "mean_monthly": -0.0001145335648,
+      "ci90_mean_monthly": [
+        -0.0004300616898,
+        0.0001900260417
+      ],
+      "p_positive_raw": 0.7286,
+      "p_positive_max_t_family": 0.9998
+    },
+    "pseudo_combined": {
+      "mean_monthly": -0.0001523611111,
+      "ci90_mean_monthly": [
+        -0.000538918287,
+        0.0002351621528
+      ],
+      "p_positive_raw": 0.7414,
+      "p_positive_max_t_family": 0.9998
+    }
+  },
+  "improvement_over_original_PG_event_family_9": {
+    "event_original_ols": {
+      "mean_monthly": 0.0,
+      "ci90_mean_monthly": [
+        0.0,
+        0.0
+      ],
+      "p_positive_raw": 1.0,
+      "p_positive_max_t_family": 1.0
+    },
+    "event_original_ridge": {
+      "mean_monthly": 9.499710648e-05,
+      "ci90_mean_monthly": [
+        -5.471122685e-05,
+        0.0002759326389
+      ],
+      "p_positive_raw": 0.1746,
+      "p_positive_max_t_family": 0.5559
+    },
+    "event_direction_interactions": {
+      "mean_monthly": 0.0002972789352,
+      "ci90_mean_monthly": [
+        -0.0001075618056,
+        0.0007382039931
+      ],
+      "p_positive_raw": 0.1258,
+      "p_positive_max_t_family": 0.4477
+    },
+    "event_quarter_interactions": {
+      "mean_monthly": 0.0004735451389,
+      "ci90_mean_monthly": [
+        0.0001169850116,
+        0.0008931751736
+      ],
+      "p_positive_raw": 0.0334,
+      "p_positive_max_t_family": 0.1333
+    },
+    "event_volatility_interactions": {
+      "mean_monthly": 7.924479167e-05,
+      "ci90_mean_monthly": [
+        -0.0002699940972,
+        0.0004623375
+      ],
+      "p_positive_raw": 0.338,
+      "p_positive_max_t_family": 0.813
+    },
+    "event_correlation_interactions": {
+      "mean_monthly": -0.000176568287,
+      "ci90_mean_monthly": [
+        -0.0004388673611,
+        7.177540509e-05
+      ],
+      "p_positive_raw": 0.8669,
+      "p_positive_max_t_family": 1.0
+    },
+    "event_nonlinear_shape": {
+      "mean_monthly": 0.0002689936343,
+      "ci90_mean_monthly": [
+        -5.850868056e-06,
+        0.0006192251157
+      ],
+      "p_positive_raw": 0.0988,
+      "p_positive_max_t_family": 0.3339
+    },
+    "event_common_market_move": {
+      "mean_monthly": 0.000322234375,
+      "ci90_mean_monthly": [
+        -8.963136574e-05,
+        0.000771316956
+      ],
+      "p_positive_raw": 0.1095,
+      "p_positive_max_t_family": 0.4084
+    },
+    "event_combined": {
+      "mean_monthly": 0.0001189618056,
+      "ci90_mean_monthly": [
+        -0.0002468727431,
+        0.0005249377315
+      ],
+      "p_positive_raw": 0.2843,
+      "p_positive_max_t_family": 0.7537
+    }
+  },
+  "improvement_over_P0_event_family_9": {
+    "event_original_ols": {
+      "mean_monthly": -0.0002041701389,
+      "ci90_mean_monthly": [
+        -0.0007365281829,
+        0.0003060803819
+      ],
+      "p_positive_raw": 0.7486,
+      "p_positive_max_t_family": 0.9364
+    },
+    "event_original_ridge": {
+      "mean_monthly": -0.0001091730324,
+      "ci90_mean_monthly": [
+        -0.0006366021991,
+        0.0003871446181
+      ],
+      "p_positive_raw": 0.6525,
+      "p_positive_max_t_family": 0.8891
+    },
+    "event_direction_interactions": {
+      "mean_monthly": 9.31087963e-05,
+      "ci90_mean_monthly": [
+        -0.0004187130208,
+        0.0005936773148
+      ],
+      "p_positive_raw": 0.385,
+      "p_positive_max_t_family": 0.6872
+    },
+    "event_quarter_interactions": {
+      "mean_monthly": 0.000269375,
+      "ci90_mean_monthly": [
+        -0.0002586829282,
+        0.0007829556713
+      ],
+      "p_positive_raw": 0.2084,
+      "p_positive_max_t_family": 0.4543
+    },
+    "event_volatility_interactions": {
+      "mean_monthly": -0.0001249253472,
+      "ci90_mean_monthly": [
+        -0.0005858140625,
+        0.0003191618056
+      ],
+      "p_positive_raw": 0.6826,
+      "p_positive_max_t_family": 0.9068
+    },
+    "event_correlation_interactions": {
+      "mean_monthly": -0.0003807384259,
+      "ci90_mean_monthly": [
+        -0.0009720682292,
+        0.0001732399306
+      ],
+      "p_positive_raw": 0.8665,
+      "p_positive_max_t_family": 0.9799
+    },
+    "event_nonlinear_shape": {
+      "mean_monthly": 6.482349537e-05,
+      "ci90_mean_monthly": [
+        -0.0004160157986,
+        0.000513670544
+      ],
+      "p_positive_raw": 0.43,
+      "p_positive_max_t_family": 0.7175
+    },
+    "event_common_market_move": {
+      "mean_monthly": 0.0001180642361,
+      "ci90_mean_monthly": [
+        -0.0004027195602,
+        0.0006300036458
+      ],
+      "p_positive_raw": 0.3539,
+      "p_positive_max_t_family": 0.6576
+    },
+    "event_combined": {
+      "mean_monthly": -8.520833333e-05,
+      "ci90_mean_monthly": [
+        -0.0005623276042,
+        0.0003712498843
+      ],
+      "p_positive_raw": 0.6262,
+      "p_positive_max_t_family": 0.8794
+    }
+  }
+}

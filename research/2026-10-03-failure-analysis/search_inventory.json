@@ -1,0 +1,8 @@
+{
+  "status": "Post-result exploration; all original IS data already seen. No OOS.",
+  "listed_return_series": 66,
+  "distinct_return_series": 57,
+  "inference": "19999 circular three-month paired bootstrap draws; centered mean statistics standardized by bootstrap SE; two-sided max-absolute-t across every listed series, duplicates retained harmlessly. Does not correct all historical decisions or research selection. Pointwise CIs are not familywise.",
+  "comparison": "Two-sided mean-return differences vs registered P0 on common108 months. This is not a Sharpe test and exposures differ.",
+  "registered_sha256": "3a923e7ef5a06a9c676dfe5d60e459ada0a968dc806e07d3944a55c77d7e89c0"
+}

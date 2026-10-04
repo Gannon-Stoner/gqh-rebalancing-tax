@@ -1,0 +1,13 @@
+{
+  "created_utc": "2026-10-03T23:07:10.760626+00:00",
+  "status": "Post-observation exploratory follow-up, triggered by timing decomposition showing F1 losses.",
+  "question": "Does the registered target mix favorable month-end pressure with a different first-session outcome? Does refitting original gate to an exit-L target help?",
+  "specifications": [
+    "P0_exit_L",
+    "PG_original_decisions_exit_L",
+    "PG_refit_exit_L_OLS",
+    "PG_refit_exit_L_ridge20"
+  ],
+  "formulas": "Keep original direction, sizing, quantities, total round-trip costs and sqrt(5) target normalization. Only endpoint changes to L. Refit uses only completed earlier events, min60, original dose/A features, expanding window. No OOS.",
+  "inference": "Decompose H1 and A slopes by horizon, all coefficients reported with robust errors. Full common period, eras, largest winner removal. Not confirmatory."
+}

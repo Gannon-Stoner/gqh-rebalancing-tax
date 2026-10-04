@@ -1,0 +1,98 @@
+{
+  "created_utc": "2026-10-03T23:03:32.006706+00:00",
+  "status": "POST-RESULT EXPLORATORY; neither preregistered nor independent validation",
+  "known_results": "Original PG negative; P0 positive; long-ES events profitable; directional asymmetry already viewed. All IS years were previously analyzed. OOS remains locked.",
+  "hypotheses": "Original model may pool unlike directions, omit volatility/correlation/quarter-end state, lack nonlinear terms, or estimate noisy coefficients with too little data. Shrinkage may improve forecast stability.",
+  "models": {
+    "original_ols": {
+      "features": [
+        "dose",
+        "A"
+      ],
+      "penalty": 0
+    },
+    "original_ridge": {
+      "features": [
+        "dose",
+        "A"
+      ],
+      "penalty": 20
+    },
+    "direction_interactions": {
+      "features": [
+        "dose",
+        "A",
+        "long",
+        "long_dose",
+        "long_A"
+      ],
+      "penalty": 20
+    },
+    "quarter_interactions": {
+      "features": [
+        "dose",
+        "A",
+        "QE",
+        "QE_dose",
+        "QE_A"
+      ],
+      "penalty": 20
+    },
+    "volatility_interactions": {
+      "features": [
+        "dose",
+        "A",
+        "log_vol",
+        "vol_dose",
+        "vol_A"
+      ],
+      "penalty": 20
+    },
+    "correlation_interactions": {
+      "features": [
+        "dose",
+        "A",
+        "corr63",
+        "corr_dose",
+        "corr_A"
+      ],
+      "penalty": 20
+    },
+    "nonlinear_shape": {
+      "features": [
+        "dose",
+        "A",
+        "dose2",
+        "A2",
+        "dose_A"
+      ],
+      "penalty": 20
+    },
+    "common_market_move": {
+      "features": [
+        "dose",
+        "A",
+        "long",
+        "common_move"
+      ],
+      "penalty": 20
+    },
+    "combined": {
+      "features": [
+        "dose",
+        "A",
+        "long",
+        "QE",
+        "log_vol",
+        "corr63"
+      ],
+      "penalty": 20
+    }
+  },
+  "method": "Expanding fit on events completed strictly before decision; >=60 observations; standardization on each training sample; fixed ridge penalty 20 excluding intercept. Both month-end and pseudo-event models; all reported. Fixed common segment 2015-10 to 2024-09. No selection on a claimed holdout.",
+  "evaluation": "net 1x/2x costs, historical eras, forecast error vs expanding mean, all single-year omissions, removal of largest winner, paired month-block CIs and centered max-t adjustment across all family models; comparisons with original PG and P0",
+  "inputs": {
+    "results_is_sha256": "3a923e7ef5a06a9c676dfe5d60e459ada0a968dc806e07d3944a55c77d7e89c0",
+    "head": "3aaa2bb11a6a0e4ab2665782892c16e8d4285435"
+  }
+}
