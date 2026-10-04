@@ -21,13 +21,14 @@ from gqh.config import repo_root  # noqa: E402
 
 ROW_STYLE = {"PG": ("#1f4e79", 2.2, "-"), "P0": ("#7f7f7f", 1.6, "-"), "PD": ("#c55a11", 1.3, "--"),
              "PE": ("#548235", 1.3, ":"), "PX": ("#2e75b6", 1.3, "-."), "PP": ("#bf9000", 1.3, "--")}
-plt.rcParams.update({"font.size": 8, "axes.titlesize": 9, "axes.labelsize": 8, "legend.fontsize": 7,
+plt.rcParams.update({"font.size": 11.5, "axes.titlesize": 11.5, "axes.labelsize": 11.5, "legend.fontsize": 11.5,
                      "axes.spines.top": False, "axes.spines.right": False, "figure.dpi": 200})
 
 
 def _save(fig, path: Path) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(path, bbox_inches="tight", dpi=200)
+    # Fixed 6.5-inch canvas matches the note text width; no shrink-to-fit of labels.
+    fig.savefig(path, dpi=200)
     plt.close(fig)
     return path
 
@@ -35,7 +36,7 @@ def _save(fig, path: Path) -> Path:
 def fig_key(res: dict, out: Path) -> Path:
     """Remaining return Y against pre-entry progress A (quintile bins): month-end events vs pseudo-events."""
     st = pd.DataFrame(res["stacked_panel"])
-    fig, ax = plt.subplots(figsize=(3.4, 2.4))
+    fig, ax = plt.subplots(figsize=(6.5, 2.3))
     for me, color, label in ((1, "#1f4e79", "month-end events"), (0, "#bf9000", "mid-month pseudo-events")):
         g = st[st["ME"] == me]
         bins = pd.qcut(g["A"], 5, labels=False, duplicates="drop")
@@ -47,9 +48,10 @@ def fig_key(res: dict, out: Path) -> Path:
         ax.plot(xs, np.polyval(b, xs), color=color, lw=1.2, alpha=0.8)
     ax.axhline(0, color="black", lw=0.5)
     ax.set_xlabel("pre-entry progress A (σ units, signed toward the flow)")
-    ax.set_ylabel("remaining return Y (σ units)")
-    ax.legend(frameon=False, ncol=2, loc="upper center", bbox_to_anchor=(0.5, -0.22), fontsize=7)
+    ax.set_ylabel("Remaining return Y (σ)")
+    ax.legend(frameon=False, ncol=2, loc="upper center", bbox_to_anchor=(0.5, -0.27), fontsize=11.5)
     ax.set_title("Remaining return vs progress (bin means, 90% CI)")
+    fig.subplots_adjust(left=0.12, right=0.98, top=0.88, bottom=0.32)
     return _save(fig, out)
 
 
@@ -57,7 +59,7 @@ def fig_equity(res: dict, out: Path, sample: str = "IS") -> Path:
     """Cumulative net return (% of NAV, uncompounded) of the six rows at 1x costs on the comparison segment."""
     sec = res[f"rows_{sample}"]
     months = pd.period_range(sec["months"][0], sec["months"][1], freq="M")
-    fig, ax = plt.subplots(figsize=(3.4, 2.4))
+    fig, ax = plt.subplots(figsize=(6.5, 1.85))
     for row, r in sec["monthly_returns_1x"].items():
         color, lw, ls = ROW_STYLE.get(row, ("black", 1, "-"))
         ax.plot(months.to_timestamp(), np.cumsum(r) * 100, color=color, lw=lw, ls=ls, label=row)
@@ -66,67 +68,62 @@ def fig_equity(res: dict, out: Path, sample: str = "IS") -> Path:
 
     ax.xaxis.set_major_locator(mdates.YearLocator(base=2 if len(months) > 60 else 1))
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
-    ax.set_ylabel("cumulative net return, % of NAV")
-    ax.set_title(f"Strategy rows, {sample} {sec['months'][0]} to {sec['months'][1]} (1x costs)")
+    ax.set_ylabel("Net return\n(% NAV)")
     h, lab = ax.get_legend_handles_labels()                      # legend below the axes: never covers a line
     order = [lab.index(r) for r in ("PG", "P0", "PD", "PE", "PX", "PP") if r in lab]
     ax.legend([h[i] for i in order], [lab[i] for i in order], frameon=False, ncol=6, loc="upper center",
-              bbox_to_anchor=(0.5, -0.12), handlelength=1.8, columnspacing=1.0)
-    ax.set_title(f"Strategy rows, {sample} {sec['months'][0]} to {sec['months'][1]} (1× costs)")
+              bbox_to_anchor=(0.5, -0.25), handlelength=1.8, columnspacing=1.0)
+    fig.subplots_adjust(left=0.12, right=0.98, top=0.96, bottom=0.35)
     return _save(fig, out)
 
 
 def fig_path(res: dict, out: Path) -> Path:
     """Dose-weighted mean signed spread path from L-12 to F1+5 by era (sign and dose frozen at L-12)."""
     prof = res["diagnostics"]["event_path_by_era"]
-    fig, ax = plt.subplots(figsize=(3.4, 2.4))
+    fig, ax = plt.subplots(figsize=(6.5, 2.3))
     colors = {"2010-15": "#9dc3e6", "2016-20": "#2e75b6", "2021-24": "#1f4e79", "OOS": "#c00000"}
     for era, row in prof.items():
         ks = sorted((int(k[1:]), v) for k, v in row.items() if k.startswith("k"))
         ax.plot([k for k, _ in ks], [v for _, v in ks], marker="o", ms=2.5, lw=1.2, color=colors.get(era, "gray"),
-                label=f"{era} (n={int(row['events'])})")
-    for x, txt in ((-8, "L-8"), (-5, "L-5"), (-4, "L-4"), (0, "L"), (1, "F1")):
-        ax.axvline(x, color="gray", lw=0.4, ls=":")
-        ax.text(x, ax.get_ylim()[1], txt, fontsize=6, ha="center", va="bottom")
+                label=f"{era} ({int(row['events'])})")
+    ax.axvline(0, color="gray", lw=0.6, ls=":")
     ax.axhline(0, color="black", lw=0.5)
-    ax.set_xlabel("sessions relative to L")
-    ax.set_ylabel("signed cumulative spread (σ units)")
+    ax.set_xticks([-12, -8, -4, 0, 1, 6], ["−12", "−8", "−4", "L", "F1", "+6"])
+    ax.set_xlabel("sessions relative to month-end")
+    ax.set_ylabel("Signed spread (σ)")
     ax.set_title("Event-time path by era", pad=10)
-    ax.legend(frameon=False)
+    ax.legend(frameon=False, ncol=3, loc="upper center", bbox_to_anchor=(0.5, -0.28))
+    fig.subplots_adjust(left=0.12, right=0.98, top=0.88, bottom=0.32)
     return _save(fig, out)
 
 
 def fig_timeline(out: Path) -> Path:
-    """Schematic of one month: pseudo-event window, event decision, entry, hold and exit."""
-    fig, ax = plt.subplots(figsize=(7.0, 1.1))
-    ax.set_xlim(-18.5, 2.5)
-    ax.set_ylim(-1, 2.2)
+    """Readable schedule; the note typesets the same schedule as a native table."""
+    fig, ax = plt.subplots(figsize=(6.5, 1.2))
     ax.axis("off")
-    ax.plot([-18, 2], [0, 0], color="black", lw=0.8)
-    for k in range(-17, 2):
-        ax.plot([k, k], [-0.08, 0.08], color="black", lw=0.6)
-    spans = [(-17, -14, 1.55, "#f2dcb3", "pseudo progress"), (-13, -8, 1.55, "#ffd966", "pseudo hold (PP)"),
-             (-8, -5, 0.75, "#bdd7ee", "progress A"), (-4, 1, 0.75, "#9dc3e6", "hold: L-4 settle -> F1 settle")]
-    for a, b, y, c, t in spans:
-        ax.add_patch(plt.Rectangle((a, y - 0.25), b - a, 0.5, color=c))
-        ax.text((a + b) / 2, y, t, ha="center", va="center", fontsize=7)
-    for k, t, ha in ((-14, "L-14\npseudo decision", "center"), (-5, "L-5  \ndecide (D, z, A, Ŷ vs C)  ", "right"),
-                     (-4, "  L-4\n  enter", "left"), (0, "L", "center"), (1, "F1\nexit", "center")):
-        ax.text(k, -0.25, t, ha=ha, va="top", fontsize=6.5)
+    tab = ax.table(cellText=[["Month-end", "L-8 to L-5", "L-5", "L-4", "F1"],
+                             ["Pseudo-event", "L-17 to L-14", "L-14", "L-13", "L-8"]],
+                   colLabels=["Schedule", "Progress", "Decision", "Entry", "Exit"],
+                   colWidths=[0.23, 0.29, 0.17, 0.15, 0.16], loc="center")
+    tab.auto_set_font_size(False)
+    tab.set_fontsize(11.5)
+    tab.scale(1, 1.5)
+    fig.subplots_adjust(left=0.01, right=0.99, top=0.99, bottom=0.01)
     return _save(fig, out)
 
 
 def fig_impact(res: dict, out: Path) -> Path:
     """Net Sharpe of PG against NAV under square-root impact (Y = 1): a scenario, not a backtest."""
     rows = res.get("risk_IS", {}).get("impact_PG", [])
-    fig, ax = plt.subplots(figsize=(3.4, 2.2))
+    fig, ax = plt.subplots(figsize=(6.5, 2.3))
     if rows:
         nav = [r["nav"] for r in rows]
         ax.semilogx(nav, [r["sharpe"] for r in rows], marker="o", color="#1f4e79")
     ax.axhline(0, color="black", lw=0.5)
     ax.set_xlabel("NAV (USD)")
-    ax.set_ylabel("net Sharpe (annualized)")
+    ax.set_ylabel("Sharpe (annualized)")
     ax.set_title("PG net Sharpe vs NAV, square-root impact")
+    fig.subplots_adjust(left=0.16, right=0.98, top=0.88, bottom=0.25)
     return _save(fig, out)
 
 

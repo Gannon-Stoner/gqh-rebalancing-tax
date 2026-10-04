@@ -1,4 +1,4 @@
-"""Run PG and P0 end to end in the Webull starter kit's backtest harness and check the note's numbers.
+"""Replay PG and P0 in the Webull starter kit's backtest harness and check the note's numbers.
 
     python scripts/webull_backtest.py          # no data, no download: replays data/replay/ (~1 minute)
 
@@ -8,12 +8,12 @@ runner keeps everything else from the kit (Cerebro, the analyzers ``examples/bac
 its ``_compute_metrics`` / ``_print_results``, ``RecorderAnalyzer`` and the HTML report) and feeds it
 Databento settlements through ``bt.feeds.PandasData``.
 
-Inputs, in order of preference:
-  * data mode, if settlement data is on disk (``data/derived/`` from the full pipeline, or the four
+Inputs (replay is always the default, independent of locally available data):
+  * ``--data`` mode requires settlement data on disk (``data/derived/`` from the full pipeline, or the four
     raw files from ``python data/download.py --pull settlements``): the frozen engine is rerun from
     the settlements (signals, gate, contracts, sizes), and the result must equal the committed replay
     files in ``data/replay/``. ``--write-replay`` rewrites them instead.
-  * replay mode, otherwise: ``data/replay/`` holds the engine's per-event trade ledger for PG and P0
+  * ``--replay`` mode: ``data/replay/`` holds the engine's per-event trade ledger for PG and P0
     (dates, contracts, sizes), the settlement prices of the held contracts on holding days only, and
     the session calendar. No signal is recomputed in this mode; the trades are replayed.
 
@@ -22,11 +22,14 @@ NAV, one feed per held contract, fills at the settlement (cheat-on-close), froze
 fixed commission, CME maintenance margins. Backtrader's per-event P&L then goes through the note's
 metric code, and the script fails unless trades, return, volatility, Sharpe (1x), max drawdown, worst
 month and turnover equal ``results.json`` for both rows in both samples (amendment A21).
-Outputs: reports/webull_backtest.json, reports/webull_backtest.md, reports/webull_kit_{PG,P0}.html.
+Outputs: reports/webull_backtest.{html,json,md}, reports/webull_kit_{PG,P0}.html.
+Use ``--output-dir PATH`` to isolate reports and ``--verbose`` for the kit's trade-by-trade log.
 """
 
 from __future__ import annotations
 
+import argparse
+import html
 import io
 import json
 import math
@@ -140,12 +143,48 @@ def from_replay(texts: dict[str, str] | None = None) -> Inputs:
         led["month"] = pd.PeriodIndex(led["month"], freq="M")
         for c in ("entry", "exit"):
             led[c] = pd.to_datetime(led[c])
+        if not led["traded"].isin([True, False]).all():
+            raise ValueError(f"{row}: traded must contain only True or False")
         led["traded"] = led["traded"].astype(bool)
         ledgers[row] = led
     prices = read("settlements_holding_days.csv")
     prices["date"] = pd.to_datetime(prices["date"])
     sessions = pd.DatetimeIndex(pd.to_datetime(read("sessions.csv")["date"]))
     return Inputs(ledgers, prices, sessions, "replay: committed trade ledger and holding-day settlements")
+
+
+def validate_inputs(inp: Inputs) -> None:
+    """Reject gaps before the feed carries prices across flat (off-holding) days."""
+    if (inp.sessions.empty or inp.sessions.hasnans or not inp.sessions.is_unique
+            or not inp.sessions.is_monotonic_increasing):
+        raise ValueError("session calendar must be nonempty, ordered and unique")
+    if inp.prices.duplicated(["root", "instrument_id", "date"]).any():
+        raise ValueError("duplicate contract/date settlements")
+    if not inp.prices["settle"].map(lambda x: math.isfinite(x) and x > 0).all():
+        raise ValueError("settlements must be finite and positive")
+    px = inp.prices.set_index(["root", "instrument_id", "date"])["settle"]
+    for row, led in inp.ledgers.items():
+        if not led["month"].is_unique or not led["month"].is_monotonic_increasing:
+            raise ValueError(f"{row}: event months must be ordered and unique")
+        if led.loc[~led["traded"], ["q_es", "q_zn", "pnl"]].ne(0).any().any():
+            raise ValueError(f"{row}: a non-traded event has contracts or P&L")
+        traded = led.loc[led["traded"]]
+        if traded.empty:
+            raise ValueError(f"{row}: no traded events to replay")
+        for _, t in traded.iterrows():
+            if t["entry"] not in inp.sessions or t["exit"] not in inp.sessions or t["entry"] >= t["exit"]:
+                raise ValueError(f"{row} {t['month']}: invalid entry/exit sessions")
+            window = inp.sessions[(inp.sessions >= t["entry"]) & (inp.sessions <= t["exit"])]
+            for leg, idcol, qcol in (("ES", "es_id", "q_es"), ("ZN", "zn_id", "q_zn")):
+                q = t[qcol]
+                if not math.isfinite(q) or q != int(q):
+                    raise ValueError(f"{row} {t['month']}: {qcol} must be a whole contract count")
+                if q == 0:
+                    continue
+                expected = pd.MultiIndex.from_product([[leg], [int(t[idcol])], window])
+                missing = expected.difference(px.index)
+                if len(missing):
+                    raise ValueError(f"{row} {t['month']}: missing holding-day settlement {missing[0]}")
 
 
 # -- the kit run -------------------------------------------------------------------------------------
@@ -196,7 +235,7 @@ class LedgerStrategy(bt.Strategy):
                 "bars_held": trade.barlen})
 
 
-def run_row(led: pd.DataFrame, inp: Inputs, cfg, margins: dict, k: float = 1.0):
+def run_row(led: pd.DataFrame, inp: Inputs, cfg, margins: dict, k: float = 1.0, *, verbose: bool = False):
     traded = led[led["traded"]]
     first, last = traded["entry"].min(), traded["exit"].max()
     sessions = inp.sessions[(inp.sessions >= first) & (inp.sessions <= last)]
@@ -235,7 +274,8 @@ def run_row(led: pd.DataFrame, inp: Inputs, cfg, margins: dict, k: float = 1.0):
     cerebro.addanalyzer(RecorderAnalyzer, _name="recorder")
     strat = cerebro.run(runonce=False)[0]
     metrics = _compute_metrics(cerebro, strat, NAV)
-    _print_results(strat, metrics)
+    if verbose:
+        _print_results(strat, metrics)
 
     # with cheat-on-close the broker executes an order while processing the next bar, so a trade's open
     # date is the bar after the entry: attribute it to that contract's latest entry on or before it
@@ -247,19 +287,138 @@ def run_row(led: pd.DataFrame, inp: Inputs, cfg, margins: dict, k: float = 1.0):
 
 
 # -- main --------------------------------------------------------------------------------------------
-def main() -> None:
+def parse_args(argv: list[str] | None = None):
+    ap = argparse.ArgumentParser(description=(
+        "Verify PG/P0 at 1x costs in the Webull starter kit's Backtrader harness. "
+        "Default: offline settlement replay of frozen trades; no keys or downloads."))
+    mode = ap.add_mutually_exclusive_group()
+    mode.add_argument("--replay", action="store_true", help="replay committed trades (default; no signals recomputed)")
+    mode.add_argument("--data", action="store_true", help="rerun signals from local settlements, then reconcile the replay")
+    ap.add_argument("--write-replay", action="store_true", help="maintainer option: replace replay inputs (requires --data)")
+    ap.add_argument("--output-dir", type=Path, default=ROOT / "reports", help="report directory (default: reports/)")
+    ap.add_argument("--verbose", action="store_true", help="include the kit's trade-by-trade log")
+    args = ap.parse_args(argv)
+    if args.write_replay and not args.data:
+        ap.error("--write-replay requires --data")
+    return args
+
+
+def reconcile_events(row: str, engine: pd.Series, replay: pd.Series, failures: list[str]) -> pd.Series:
+    """Every event must match: aggregate metric agreement cannot hide offsetting errors."""
+    diff = (replay.reindex(engine.index) - engine).abs()
+    bad = diff.isna() | (diff > 0.01)
+    if bad.any():
+        failures.append(f"{row}: {int(bad.sum())}/{len(engine)} event P&Ls differ by more than $0.01 or are missing")
+    extra = replay.index.difference(engine.index)
+    if len(extra):
+        failures.append(f"{row}: unexpected replay events {list(extra.astype(str))}")
+    return diff
+
+
+def equity_svg(curves: dict, oos_start: pd.Timestamp) -> str:
+    """Embed the broker's recorded daily equity without a browser plotting dependency."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.dates as mdates
+    import matplotlib.pyplot as plt
+
+    with plt.rc_context({"font.size": 11.5, "svg.fonttype": "none"}):
+        fig, ax = plt.subplots(figsize=(10.5, 3.7), layout="constrained")
+        for row, color, label in (("PG", "#1466a3", "PG strategy"), ("P0", "#b55b13", "P0 always-trade")):
+            eq = curves[row]
+            # RecorderAnalyzer converts midnight session labels to Eastern. Recover
+            # the original UTC session dates rather than displaying the previous day.
+            dates = pd.to_datetime(eq["datetime"], utc=True).tz_convert(None)
+            values = [(float(value) - NAV) / NAV * 100 for value in eq["value"]]
+            ax.plot(dates, values, color=color, linewidth=1.6, label=label)
+        ax.axvline(oos_start, color="#64748b", linewidth=1, linestyle="--")
+        ax.axvspan(oos_start, max(pd.to_datetime(c["datetime"], utc=True).max().tz_convert(None)
+                                 for c in curves.values()), color="#cbd5e1", alpha=.28,
+                   label=f"OOS from {oos_start:%b %Y}")
+        ax.axhline(0, color="#64748b", linewidth=.7)
+        ax.set_ylabel("Cumulative return (% of fixed NAV)")
+        ax.xaxis.set_major_locator(mdates.YearLocator(2))
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
+        ax.grid(axis="y", alpha=.2)
+        ax.spines[["top", "right"]].set_visible(False)
+        ax.legend(loc="upper left", frameon=False, ncols=3, fontsize=11.5)
+        ax.margins(x=.01)
+        stream = io.StringIO()
+        fig.savefig(stream, format="svg", metadata={"Date": None})
+        plt.close(fig)
+    markup = stream.getvalue()
+    return "\n".join(line.rstrip() for line in markup[markup.index("<svg"):].splitlines())
+
+
+def render_summary(out: dict, inp: Inputs, failures: list[str], destination: Path,
+                   curves: dict, oos_start: pd.Timestamp) -> None:
+    """Small offline entry point: note-comparable metrics before the detailed kit charts."""
+    rows = []
+    for row in ROWS:
+        for sample, rec in out[row]["samples"].items():
+            m = {k: v["backtrader"] for k, v in rec["metrics"].items()}
+            values = [row, sample, str(m["trades"]), f"{m['ann_return']:.2%}", f"{m['ann_vol']:.2%}",
+                      f"{m['sharpe']:.2f}", f"{m['max_drawdown']:.2%}", f"{m['worst_month']:.2%}",
+                      f"{m['turnover']:.1f}×", "PASS" if rec["match"] else "FAIL"]
+            rows.append("<tr>" + "".join(f"<td>{html.escape(v)}</td>" for v in values) + "</tr>")
+    checks = "".join(f"<li>{row}: {out[row]['events_matched_0.01usd']}/{out[row]['events']} event P&amp;Ls "
+                     f"match to $0.01; largest gap ${out[row]['max_abs_event_diff_usd']:.4f}.</li>" for row in ROWS)
+    errors = "" if not failures else "<ul>" + "".join(f"<li>{html.escape(e)}</li>" for e in failures) + "</ul>"
+    status = "PASS" if not failures else "FAIL"
+    color = "#166534" if not failures else "#991b1b"
+    destination.write_text(f"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Webull replay verification — {status}</title><style>
+body{{font:17px/1.55 system-ui,sans-serif;margin:3rem auto;padding:0 1.5rem;max-width:1100px;color:#17202a}}
+h1{{line-height:1.2}} .status{{font-weight:700;color:{color}}} table{{border-collapse:collapse;width:100%;font-size:15px}}
+th,td{{padding:.65rem .5rem;border-bottom:1px solid #cbd5e1;text-align:right}}th:first-child,td:first-child{{text-align:left}}
+.table{{overflow-x:auto}}a{{color:#075985}}code{{font-size:.9em}}.muted{{color:#475569}}
+</style></head><body><h1>Webull starter kit replay verification</h1>
+<p class="status">{status}: PG and P0, 1× frozen costs, $10 million reference NAV.</p>{errors}
+<p><strong>Input mode:</strong> {html.escape(inp.mode)}.</p>
+<p>Backtrader replays the frozen ES/ZN orders at settlement with the registered per-side costs.
+This is an accounting and fill reconciliation. In default replay mode, signals, contract selection,
+and sizing are supplied by the committed ledger, not independently recomputed. It is not a Webull
+live-data or executable bid/ask backtest.</p>
+<h2>Metrics checked against the Quant Note's results.json</h2><div class="table"><table><thead><tr>
+<th>Row</th><th>Sample</th><th>Trades</th><th>Return/yr</th><th>Vol/yr</th><th>Sharpe</th><th>Max DD</th>
+<th>Worst month</th><th>Turnover/yr</th><th>Metrics</th></tr></thead><tbody>{''.join(rows)}</tbody></table></div>
+<p class="muted">Net monthly event returns, fixed NAV, no compounding. Sharpe uses monthly returns annualized by √12.
+Trades and turnover use the frozen ledger; the six-row strategy study, inference, capacity and 2× costs
+are outside this PG/P0 1× check. IS and OOS dates follow results.json.</p><ul>{checks}</ul>
+<h2>Daily settlement equity from Backtrader</h2>
+<div style="overflow-x:auto" role="img" aria-label="PG and P0 daily cumulative returns on fixed NAV, with the out-of-sample period shaded from October 2024">
+{equity_svg(curves, oos_start)}</div>
+<p class="muted">Each curve uses the broker's recorded daily equity, net of 1× costs, divided by the fixed
+$10 million starting NAV. This shows mark-to-market changes during each holding period. The table above
+instead books each event's total P&amp;L in its event month; daily drawdowns and Sharpe therefore differ.
+The extra flat processing day lets Backtrader complete the final settlement exit.</p>
+<h2>Detailed reports</h2><p><a href="webull_kit_PG.html">PG strategy</a> ·
+<a href="webull_kit_P0.html">P0 always-trade benchmark</a> ·
+<a href="webull_backtest.json">Machine-readable verification</a> · <a href="webull_backtest.md">Text report</a></p>
+<p class="muted">The kit's detailed charts use daily equity and individual leg trades, so their native Sharpe
+and trade counts differ from the monthly event metrics above. The portfolio equity chart is at the bottom
+of each detailed report. Those charts load Plotly from its CDN and require internet; this summary works offline.</p>
+</body></html>""", encoding="utf-8")
+
+
+def main(argv: list[str] | None = None) -> None:
+    args = parse_args(argv)
     setup_logging()
     cfg = frozen_config()
     results = json.loads((ROOT / "results.json").read_text())
     margins = load_margins(ROOT) or {"ES": 26164.0, "ZN": 1875.0}
     failures = []
 
-    panels = None if "--replay" in sys.argv else _settlement_panels()
+    panels = _settlement_panels() if args.data else None
+    if args.data and panels is None:
+        raise SystemExit("DATA MISSING: --data requires local settlement panels or all four settlement raw files. "
+                         "Use --replay for the committed offline verification.")
     if panels is None:
         inp = from_replay()
     else:
         texts = replay_texts(from_engine(panels))
-        if "--write-replay" in sys.argv:
+        if args.write_replay:
             REPLAY.mkdir(parents=True, exist_ok=True)
             for name, text in texts.items():
                 (REPLAY / name).write_text(text)
@@ -270,19 +429,33 @@ def main() -> None:
         else:
             print("engine rerun from settlements reproduces every committed replay file byte for byte")
         inp = from_replay(texts)
-        inp.mode = "data: engine rerun from settlements (equals data/replay/)"
+        inp.mode = "data: engine rerun from settlements (" + ("DIFFERS FROM" if stale else "equals") + " data/replay/)"
+    try:
+        validate_inputs(inp)
+    except ValueError as exc:
+        raise SystemExit(f"INVALID REPLAY INPUT: {exc}") from exc
+    output_dir = args.output_dir.expanduser().resolve()
+    output_dir.mkdir(parents=True, exist_ok=True)
     print(f"input mode: {inp.mode}")
+    scope = ("signals rerun from local settlements" if args.data else "frozen trades replayed; signals not recomputed")
+    print(f"Checking PG/P0 at 1x costs against results.json; {scope}.", flush=True)
 
     months = {s: pd.period_range(*results[f"rows_{s}"]["months"], freq="M") for s in ("IS", "OOS")}
-    out, lines = {}, []
+    out, lines, curves = {}, [], {}
     for row in ROWS:
         led = inp.ledgers[row]
-        strat, metrics, bt_pnl = run_row(led, inp, cfg, margins)
+        print(f"Running {row}...", flush=True)
+        strat, metrics, bt_pnl = run_row(led, inp, cfg, margins, verbose=args.verbose)
         if strat.rejected:
             failures.append(f"{row}: {len(strat.rejected)} orders rejected, e.g. {strat.rejected[:3]}")
+        expected_legs = int(led.loc[led["traded"], ["q_es", "q_zn"]].ne(0).sum().sum())
+        if len(strat.closed_trades) != expected_legs:
+            failures.append(f"{row}: expected {expected_legs} closed leg trades, got {len(strat.closed_trades)}")
+        if any(strat.getposition(data).size for data in strat.datas):
+            failures.append(f"{row}: positions remain open after the final exit")
         tr = led["traded"]
         eng = led.loc[tr].set_index("month")["pnl"]
-        diff = (bt_pnl.reindex(eng.index).fillna(0.0) - eng).abs()
+        diff = reconcile_events(row, eng, bt_pnl, failures)
         led_bt = led.copy()                             # every return below is Backtrader's P&L / NAV
         led_bt.loc[tr, "pnl"] = led_bt.loc[tr, "month"].map(bt_pnl).to_numpy()
         led_bt["ret"] = led_bt["pnl"] / NAV
@@ -301,17 +474,23 @@ def main() -> None:
                          f"{mine['sharpe']:.2f} | {mine['max_drawdown']:.2%} | {mine['worst_month']:.2%} | "
                          f"{mine['turnover']:.1f}× | {'yes' if not bad else 'NO'} |")
         out[row] = rec
-        render_report(strat.analyzers.recorder.get_analysis(), strat.closed_trades,
-                      str(ROOT / "reports" / f"webull_kit_{row}.html"),
+        recorded = strat.analyzers.recorder.get_analysis()
+        curves[row] = recorded["equity"]
+        render_report(recorded, strat.closed_trades,
+                      str(output_dir / f"webull_kit_{row}.html"),
                       title=f"{row} @1x, Webull starter kit harness ({led['month'].min()} to {led['month'].max()})",
                       metrics=metrics)
 
-    (ROOT / "reports" / "webull_backtest.json").write_text(json.dumps(out, indent=1, sort_keys=True, default=str))
+    out["_verification"] = {"passed": not failures, "input_mode": inp.mode, "cost_multiplier": 1.0,
+                            "checked_metrics": list(CHECKED), "failures": failures}
+    (output_dir / "webull_backtest.json").write_text(json.dumps(out, indent=1, sort_keys=True, default=str))
     md = ["# PG and P0 in the Webull starter kit's backtest harness", "",
           "Generated by `scripts/webull_backtest.py` (amendment A21). Engine, analyzers, metric code and HTML report:",
           "the Webull starter kit's (`third_party/webull_kit`). Feed: Databento settlements via `PandasData` (the kit's",
           "Webull OpenAPI feed has no ES/ZN futures). Every metric below is computed from Backtrader's per-event P&L",
-          "with the note's metric code and checked against `results.json`.", "",
+          "with the note's metric code and checked against `results.json` (trades and turnover use the frozen ledger).",
+          f"Input mode: {inp.mode}. Default replay does not independently recompute signals, selection or sizing.",
+          "Scope: PG and P0, IS and OOS, 1x costs only; not PX bid/ask execution, inference or capacity.", "",
           "| Row | Sample | Trades | Ret/yr | Vol/yr | Sharpe 1× | Max DD | Worst month | Turnover/yr | = results.json |",
           "|---|---|---|---|---|---|---|---|---|---|", *lines, ""]
     for row in ROWS:
@@ -321,13 +500,16 @@ def main() -> None:
                   f"${m['pnl']:,.0f}, max drawdown {m['max_drawdown_pct']:.2f}%, daily-annualized Sharpe "
                   f"{m['sharpe_ratio'] if m['sharpe_ratio'] is None else round(m['sharpe_ratio'], 2)} (a different "
                   f"estimator from the note's monthly one), {m['total_trades']} leg trades. "
-                  f"Report: `reports/webull_kit_{row}.html`.")
-    (ROOT / "reports" / "webull_backtest.md").write_text("\n".join(md) + "\n")
+                  f"Report: `webull_kit_{row}.html`.")
+    md.extend(["", "Verification: " + ("FAIL" if failures else "PASS"), *[f"- {f}" for f in failures]])
+    (output_dir / "webull_backtest.md").write_text("\n".join(md) + "\n")
+    render_summary(out, inp, failures, output_dir / "webull_backtest.html", curves, months["OOS"][0].start_time)
     print("\n".join(md))
     print(f"\ninput mode: {inp.mode}")
     if failures:
         raise SystemExit("MISMATCH: " + "; ".join(failures))
-    print("OK: the Webull-kit Backtrader run reproduces every checked number in results.json")
+    print("PASS: PG/P0 event P&Ls and all 28 checked sample metrics match results.json at 1x costs.")
+    print(f"Open summary: {output_dir / 'webull_backtest.html'}")
 
 
 if __name__ == "__main__":

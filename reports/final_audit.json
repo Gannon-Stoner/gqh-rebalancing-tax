@@ -1,0 +1,132 @@
+{
+  "samples": {
+    "IS": {
+      "archived_PG_capacity_one_lot_pass_share": 0.9275362319,
+      "excluded_early_close_events": [
+        {
+          "entry": "2015-12-24",
+          "entry_early_close": true,
+          "exit": "2016-01-04",
+          "exit_early_close": false,
+          "month": "2015-12"
+        },
+        {
+          "entry": "2017-06-26",
+          "entry_early_close": false,
+          "exit": "2017-07-03",
+          "exit_early_close": true,
+          "month": "2017-06"
+        },
+        {
+          "entry": "2017-11-24",
+          "entry_early_close": true,
+          "exit": "2017-12-01",
+          "exit_early_close": false,
+          "month": "2017-11"
+        },
+        {
+          "entry": "2019-12-24",
+          "entry_early_close": true,
+          "exit": "2020-01-02",
+          "exit_early_close": false,
+          "month": "2019-12"
+        },
+        {
+          "entry": "2020-12-24",
+          "entry_early_close": true,
+          "exit": "2021-01-04",
+          "exit_early_close": false,
+          "month": "2020-12"
+        }
+      ],
+      "matched_PG_1x": {
+        "ann_return": 0.0004048819444444447,
+        "ann_vol": 0.008591749080558887,
+        "max_drawdown": 0.019236312499999998,
+        "sharpe": 0.047124507553484955,
+        "trades": 64,
+        "turnover": 4.027404097222221,
+        "worst_month": -0.01166275
+      },
+      "months": [
+        "2015-10",
+        "2024-09"
+      ],
+      "reported_PG_1x": {
+        "ann_return": -0.0004108749999999999,
+        "ann_vol": 0.008729311198895098,
+        "max_drawdown": 0.025455250000000002,
+        "sharpe": -0.04706843308003567,
+        "trades": 69,
+        "turnover": 4.386542638888889,
+        "worst_month": -0.01166275
+      },
+      "reported_PX_1x": {
+        "ann_return": 0.0004699513889,
+        "ann_vol": 0.008501713752,
+        "max_drawdown": 0.0188263125,
+        "sharpe": 0.05527725381,
+        "trades": 64,
+        "turnover": 4.027404097,
+        "worst_month": -0.01136275
+      }
+    },
+    "OOS": {
+      "archived_PG_capacity_one_lot_pass_share": 0.875,
+      "excluded_early_close_events": [
+        {
+          "entry": "2024-12-24",
+          "entry_early_close": true,
+          "exit": "2025-01-02",
+          "exit_early_close": false,
+          "month": "2024-12"
+        },
+        {
+          "entry": "2025-12-24",
+          "entry_early_close": true,
+          "exit": "2026-01-02",
+          "exit_early_close": false,
+          "month": "2025-12"
+        }
+      ],
+      "matched_PG_1x": {
+        "ann_return": 0.008433625,
+        "ann_vol": 0.01105828740567306,
+        "max_drawdown": 0.0035031249999999997,
+        "sharpe": 0.7626519994111773,
+        "trades": 14,
+        "turnover": 5.181508125,
+        "worst_month": -0.003487875
+      },
+      "months": [
+        "2024-10",
+        "2026-09"
+      ],
+      "reported_PG_1x": {
+        "ann_return": 0.010036281250000001,
+        "ann_vol": 0.011069521374101114,
+        "max_drawdown": 0.003503125,
+        "sharpe": 0.9066590063669291,
+        "trades": 16,
+        "turnover": 5.5917725,
+        "worst_month": -0.003487875
+      },
+      "reported_PX_1x": {
+        "ann_return": 0.008974875,
+        "ann_vol": 0.01110213887,
+        "max_drawdown": 0.0036953125,
+        "sharpe": 0.8083915275,
+        "trades": 14,
+        "turnover": 5.181508125,
+        "worst_month": -0.0036706875
+      }
+    }
+  },
+  "scope": "PG recomputed from committed ledger at 1x costs; PX read from official results. Calendar exclusions match PX's recorded exclusions; full monthly ranges retain flat months. This does not recompute quotes, signals, volume or holiday capacity.",
+  "source_sha256": {
+    "config/frozen.yaml": "0eede8ec46f7985ad5ee335dec26e2f8e227c74affd97edccdf1acd0a6366dbe",
+    "data/replay/ledger_PG.csv": "cafd5edf82be31817ce641d87467046ad104b4bf9f66ab4e7857f015e4f14504",
+    "results.json": "ecc8c8048149b74d6c647ceee0e94bb2830096c5838e61bcb04e894e74773b7c"
+  },
+  "status": "post-result reporting audit; no strategy or official-result changes"
+}

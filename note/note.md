@@ -2,9 +2,9 @@
 
 ## Summary
 
-Balanced funds must sell the asset that outperformed during the month and buy the laggard, on a calendar. That flow is public, so the question for a trader is not whether it moves prices but how much of the move is still left when we can trade. We designed one rule to answer it, the gate (PG), and pre-registered it (git tag `prereg-final`, committed before any price data was loaded). At the \(L{-}5\) settlement we forecast the remaining ES–ZN spread return from the size of the rebalancing need (the *dose*) and from how far the spread has already moved our way (the *progress*). We trade at \(L{-}4\) only if the forecast exceeds round-trip cost, and exit at the first session of the new month.
+Calendar-based 60/40 rebalancing sells the outperforming asset and buys the laggard. We test how much return remains after earlier price adjustment, using a pre-registered gate (PG; git tag `prereg-final`). At the \(L{-}5\) settlement, PG forecasts the remaining ES–ZN spread return from the rebalancing need (*dose*) and prior signed price movement (*progress*). It enters at \(L{-}4\) only when the forecast exceeds round-trip cost, and exits at the first session of the new month.
 
-In sample (2015-10 to 2024-09) the gate failed: PG's net Sharpe ratio was −0.05 against 0.13 for always trading, and neither confirmatory hypothesis survived (Holm-adjusted \(p = 0.64\) and \(0.64\)). A post-hoc analysis traces the failure to a single day: the trades earn into month-end and give much of the gain back on the first session of the new month (Section 4). <!--OOS-->Out of sample (2024-10 to 2026-09) PG did better (0.91 vs 0.14), but on 16 trades, two of which carry the result, this does not overturn the in-sample failure.<!--/OOS-->
+In sample (2015-10 to 2024-09) the gate failed: PG's net Sharpe ratio was −0.05 against 0.13 for always trading, and neither confirmatory hypothesis survived (Holm-adjusted \(p = 0.64\) and \(0.64\)). Post-hoc analysis distinguishes poor gate selection from the baseline trade's first-session giveback (Section 4). <!--OOS-->Out of sample (2024-10 to 2026-09) PG did better (0.91 vs 0.14), but on 16 trades, two of which carry the result, this does not overturn the in-sample failure.<!--/OOS-->
 
 ## 1. Economic hypothesis
 
@@ -12,21 +12,26 @@ In sample (2015-10 to 2024-09) the gate failed: PG's net Sharpe ratio was −0.0
 \[ D = \frac{0.24\,(R_E - R_B)}{1 + 0.6\,R_E + 0.4\,R_B}, \]
 where \(R_E\) and \(R_B\) are the month-to-date equity and bond returns. This is accounting, not a forecast: it is the demand of a hypothetical fund, and we observe no orders.
 
-*Edge source: a structural constraint.* The flow comes from calendar rebalancers (pension plans, balanced and target-date funds) and their overlay managers, whose mandates fix weights at a date, not at a price. At our fill the other side is liquidity suppliers and earlier anticipators. That this flow moves prices is documented [1–3], and sell-side desks estimate it monthly. It persists because of governance and scarce risk capital, not secrecy: committees set the rules, and harvesting it means about twelve noisy, crash-exposed bets a year. At the in-sample Sharpe ratio of always trading, a \(t\)-statistic of 2 would require 2,677 months of data, so no arbitrageur can establish the edge quickly enough to compete it away.
+*Edge source: a structural constraint.* Calendar rebalancers and their overlay managers target portfolio weights on scheduled dates. Potential counterparties at entry include liquidity suppliers and earlier anticipators; we do not identify them directly. Rebalancing pressure is documented in [1], but predictable flow need not yield profits after costs [2–3]. Governance constraints and limited risk capital motivate the hypothesis; they do not establish a persistent tradable edge.
 
-*Our contribution.* Knowing that rebalancing moves prices does not tell a trader whether anything is left to capture once everyone can predict it. This strategy is built to answer that question: it conditions the trade on how much of the expected move has already happened before entry, and tests whether doing so improves the trade after costs. Two forces should shrink what is left after early progress (anticipators have already pushed the price, and the move itself reduces the drift funds must trade); two predict the opposite (news momentum and persistent orders). Ordinary short-term reversal could mimic the first pair, so the design includes a mid-month placebo. Four elements are new: (i) pricing the *remaining* move after anticipation rather than the flow itself; (ii) a mid-month placebo (PP) that separates rebalancing from ordinary reversal; (iii) an exposure-matched control (PE) that separates a better gate from simply taking less risk; and (iv) pre-registered, falsifiable kill conditions, with every variant reported.
+*Our contribution.* We test whether prior price adjustment helps predict the remaining return after costs. Anticipation and reduced portfolio drift predict less remaining return; news momentum and persistent orders predict more. Our extension combines four design elements: (i) a gate on the *remaining* move; (ii) a mid-month placebo (PP) to test against ordinary reversal; (iii) an exposure-matched control (PE) to distinguish selection from taking less risk; and (iv) pre-registered kill conditions, with every registered variant reported. The contribution is this joint test in month-end rebalancing, not the invention of these methods.
 
 *Kill conditions (pre-registered).* An in-sample dose slope \(b \le 0\); a progress interaction \(c_E \ge 0\); no gain over the exposure-matched control; a net Sharpe ratio \(\le 0\) at twice the assumed costs; or a binding leg that cannot fill one contract within 1% of execution-window volume.
 
 ## 2. Data and universe
 
-*Sources and samples.* Databento GLBX.MDP3 [4], all outright quarterly ES and ZN contracts (contract definitions, daily settlements with open interest and volume, and 1-minute quotes and bars), and the Ken French daily factors [5]. The in-sample period (IS) runs from 2010-06-07 to 2024-10-01. The out-of-sample period (OOS) starts on 2024-10-02, covers the most recent two years as the track rule requires, and was loaded once, after the `freeze-final` tag<!--OOS--> (24 months, all usable)<!--/OOS-->.
+*Sources and samples.* Databento GLBX.MDP3 [4] supplies outright quarterly ES/ZN definitions, settlements, open interest, volume and minute quotes/bars; French supplies daily factors [5]. IS runs from 2010-06-07 to 2024-10-01. OOS starts 2024-10-02, covering two years under the track rule, and was evaluated after `freeze-final`<!--OOS--> (24 usable months)<!--/OOS-->. Published extensions had partly exposed Oct-2024–Dec-2025 before registration; this is a frozen-rule evaluation, not a wholly untouched holdout.
 
-*Sessions and contracts.* A session is a CME date on which both legs settle and NYSE is open (171 IS months, 168 valid events, 169 pseudo-events). \(L\) is the last such session of a month and \(F_1\) the first of the next. The ES contract is the one with the highest open interest at \(L{-}8\); the ZN contract is the nearest one whose first position day falls after \(F_1\). Daily settlements drive signals and P&L; 1-minute quotes and bars are used for quote fills (PX) and capacity. Each event holds one contract per leg, so no roll enters a return; futures carry no survivorship bias and need no split or dividend adjustment. Months without a usable settlement (3 of 171 IS) are skipped, and no price is ever filled from a later date. Before 2015 the vendor records lack a "final" settlement flag and open interest; frozen fallback rules, validated where both exist, handle this (App. 1).
+*Sessions and contracts.* A session is a CME date on which both legs settle and NYSE is open (171 IS months, 168 valid events, 169 pseudo-events). \(L\) is the last such session of a month and \(F_1\) the first of the next. The ES contract is the one with the highest open interest at \(L{-}8\); the ZN contract is the nearest one whose first position day falls after \(F_1\). Settlements drive signals and P&L; minute data support PX fills and capacity. Each leg holds one expiry in variable whole-contract quantities, without rolling during an event. The full futures universe needs no equity split/dividend adjustment. Two initial months lack the volatility warm-up; Sep-2014 lacks a decision-day settlement. These three events are excluded; prices are never filled from later dates. Pre-2015 final flags and open interest are missing; validated frozen fallbacks apply (App. 1).
 
-## 3. Methodology (frozen before any backtest)
+## 3. Frozen strategy and methodology
 
-<figure><img src="reports/figures/timeline.png"><figcaption>Figure 1. One month. Pseudo-events apply the same formulas twelve sessions earlier. Returns between the decision (\(L{-}5\)) and the fill (\(L{-}4\)) never count.</figcaption></figure>
+| Schedule | Progress | Decision | Entry | Exit |
+|---|---|---|---|---|
+| Month-end | \(L-8\) to \(L-5\) | \(L-5\) | \(L-4\) | \(F_1\) |
+| Pseudo-event | \(L-17\) to \(L-14\) | \(L-14\) | \(L-13\) | \(L-8\) |
+
+Figure 1. Event schedule. Pseudo-events occur nine sessions earlier. Decision-to-entry returns never enter holding-period P&L.
 
 *Signal at \(L{-}5\).* Let \(X = r_{ES} - r_{ZN}\) be the daily spread return and \(\hat\sigma\) its zero-mean EWMA volatility (\(\lambda = 0.94\)). With \(n\) sessions since the previous \(L\),
 \[ z = \frac{D}{0.24\,\hat\sigma\sqrt{n}}, \qquad \text{dose} = \min(|z|, 2), \qquad s = -\operatorname{sign}(D), \]
@@ -35,11 +40,13 @@ so the trade goes with the coming rebalancing. Progress and the outcome are
 
 *Gate.* The forecast \(\hat Y = \hat a + \hat b\,\text{dose} + \hat c\,A\) is fitted by OLS on completed past events only (at least 60), and the coefficients are frozen at the end of IS for OOS. PG trades if and only if \(\hat Y\) exceeds round-trip cost in risk units; otherwise it stays flat, and it never reverses. There is at most one trade a month.
 
-*Position and costs.* Legs have equal notional, sized so that a full-dose event risks 0.87% of NAV over five days, with caps of 0.75 × NAV per leg and 1.5 × NAV gross, in whole contracts at a \$10M reference NAV. Entry is at the \(L{-}4\) settlement and exit at \(F_1\). Cost per contract per side is half a tick (ES \$6.25, ZN \$7.81) plus a \$2.50 fee, about 0.3–0.9 bp of notional over 2015–24; every row is also run at twice these costs.
+*Position and costs.* Legs target equal notional and a full-dose five-day standard deviation of 0.87% of NAV, with caps of 0.75 × NAV per leg and 1.5 × NAV gross, in whole contracts at a \$10M reference NAV. Entry is at the \(L{-}4\) settlement and exit at \(F_1\). Cost per contract per side is half a tick (ES \$6.25, ZN \$7.81) plus a \$2.50 fee, about 0.3–0.9 bp of notional over 2015–24; every row is also run at twice these costs.
 
 *Six rows, all reported (\(N = 6\)).* PG, the gate; P0, always trade; PD, a dose-only gate (does progress add anything?); PE, P0 scaled to PG's participation (is any gain just less risk?); PX, PG filled at the 15:59 ET bid and ask; PP, PG applied to mid-month pseudo-events (is it ordinary reversal?). All rows share one walk-forward segment, 2015-10 to 2024-09.
 
-*Confirmatory tests (Holm, one-sided, \(\alpha = 0.05\)).* H1: \(b > 0\) in \(Y = a + b\,\text{dose} + \gamma\,\text{QE}\), where QE marks quarter-end months. H2: \(c_E < 0\) in the stacked event and pseudo-event regression, that is, progress matters more at month-end than mid-month. A studentized month-block bootstrap has size 3.8%–6.4% at a nominal 5% on synthetic GARCH histories run through the real code; its power is low and was stated in advance (App. 2). PG and P0 also run end to end in the Webull starter kit's Backtrader harness, which reproduces all 85 + 127 event P&Ls to \$0.01 and every reported metric exactly (amendment A21).
+*Confirmatory tests (Holm, one-sided, \(\alpha = 0.05\)).* H1: \(b > 0\) in \(Y = a + b\,\text{dose} + \gamma\,\text{QE}\), where QE marks quarter-end months. H2: \(c_E < 0\) in the stacked event and pseudo-event regression, that is, progress matters more at month-end than mid-month. The studentized month-block bootstrap has 3.8%–6.4% size at nominal 5% on synthetic GARCH histories; low power was disclosed in advance (App. 2). Webull-kit Backtrader matches 85 PG and 127 P0 event P&Ls to \$0.01. At 1× costs, it matches their IS/OOS trade counts, annualized return and volatility, Sharpe, max drawdown, worst month and turnover (A21); it verifies ledger accounting, not independent signal generation.
+
+<div class="pagebreak"></div>
 
 ## 4. Results (net of costs, % of a \$10M reference NAV)
 
@@ -56,16 +63,15 @@ so the trade goes with the coming rebalancing. Progress and the outcome are
 
 Monthly returns (zero in flat months), annualized and uncompounded on a fixed NAV. DSR is the deflated Sharpe ratio at \(N = 6\) [6]; it is lower at the logged prior-look counts (App. 2).
 
-<div class="row">
-<figure><img src="reports/figures/key_y_vs_a.png"><figcaption>Figure 2. Remaining return against pre-entry progress, month-end events vs mid-month pseudo-events (IS).</figcaption></figure>
-<figure><img src="reports/figures/equity_is.png"><figcaption>Figure 3. Cumulative net return of the six rows at 1× costs (IS).</figcaption></figure>
-</div>
+<figure><img src="reports/figures/equity_is.png"><figcaption>Figure 2. Cumulative net return, all six rows, IS (1× costs).</figcaption></figure>
 
-*Does the gate help? No.* Sharpe-ratio differences (90% month-block intervals): PG − P0 −0.18 [−0.62, +0.30], PG − PD +0.07 [−0.36, +0.49] and PG − PE −0.18 [−0.62, +0.29]. PG trades 66% of P0's events yet trails both P0 and PE: the gate removed good trades along with the bad. Neither confirmatory hypothesis survives. For H1, \(\hat b = −0.010\) σ per unit of dose (90% CI [−0.189, +0.179], Holm \(p = 0.638\)): the size of the need did not predict the remaining return at a tradable lag. For H2, \(\hat c_E = −0.062\) ([−0.279, +0.156], Holm \(p = 0.638\)): the sign is right but the effect is small, and with 58% power at \(c_E = −0.27\) a null was likely, so we read it as an upper bound. Wild-bootstrap and Newey–West \(p\)-values agree (App. 2). PG's monthly skew is +0.14 and it wins 43% of its trades, so the Sharpe ratio hides no short-volatility tail. The pressure itself has faded: the signed spread path rises over the holding window in 2010–20 but is flat in 2021–24 (App. 3).
+*Does the gate help in sample?* Sharpe-ratio differences (90% month-block intervals): PG − P0 −0.18 [−0.62, +0.30], PG − PD +0.07 [−0.36, +0.49] and PG − PE −0.18 [−0.62, +0.29]. PG trades 66% of P0's events yet trails both P0 and PE: the gate removed good trades along with the bad. Neither confirmatory hypothesis survives. For H1, \(\hat b = −0.010\) σ per unit of dose (90% CI [−0.189, +0.179], Holm \(p = 0.638\)): no positive dose effect is established at a tradable lag. For H2, \(\hat c_E = −0.062\) ([−0.279, +0.156], Holm \(p = 0.638\)): the estimate has the predicted sign, but its confidence interval is wide; non-rejection does not establish absence. Wild-bootstrap and Newey–West \(p\)-values agree (App. 2). PG's monthly skew is +0.14 and it wins 43% of its trades. Observed skew does not rule out unobserved tail risk. Descriptively, the signed spread path rises over the holding window in 2010–20 but is flat in 2021–24 (App. 3).
 
-*Why it failed (post-hoc, in-sample only, never tested out of sample).* Split at the month-end close, always-trade's 104 IS positions earned +\$852,016 gross from entry to \(L\), then lost −\$610,953 in the single session from \(L\) to \(F_1\), almost entirely in short-ES positions; costs were \$57,538. Exiting at \(L\) instead would have netted \$794,478 (Sharpe 0.63; 0.59 at twice the costs), profitably in both trade directions and in every era. But this was one of 57 series examined after the result, and adjusted for all of them its \(p\)-value is 0.65; ordinary turn-of-month strength in equities is a competing explanation. The frozen rule was not changed; the analysis is in the repository's `research/` folder.
+*Failure diagnosis (post-hoc, IS only).* PG kept 69 trades netting −\$36,979 and rejected 35 netting +\$220,504: poor selection explains its shortfall to P0. Separately, split at the month-end close, always-trade's 104 IS positions earned +\$852,016 gross from entry to \(L\), then lost −\$610,953 in the single session from \(L\) to \(F_1\), almost entirely in short-ES positions; costs were \$57,538. Exiting at \(L\) instead would have netted \$794,478 (Sharpe 0.63; 0.59 at twice the costs), profitably in both trade directions and in every era. But this was one of 57 series examined after the result, and adjusted for all of them its \(p\)-value is 0.65; ordinary turn-of-month strength in equities is a competing explanation. The frozen rule was not changed; the analysis is in the repository's `research/` folder.
 
 <!--OOS-->
+<div class="pagebreak"></div>
+
 ### Out of sample (2024-10 to 2026-09, opened once after `freeze-final`)
 
 | Row | Trades | Ret/yr | Vol/yr | SR 1× | SR 2× | Max DD | Worst mo. | Turn./yr | DSR |
@@ -75,48 +81,48 @@ Monthly returns (zero in flat months), annualized and uncompounded on a fixed NA
 | PD | 23 | 0.18% | 1.34% | 0.14 | 0.10 | 1.30% | −0.62% | 8.9× | 0.13 |
 | PE | 23 | 0.18% | 0.90% | 0.20 | 0.16 | 0.87% | −0.41% | 6.0× | 0.15 |
 | PX | 14 | 0.90% | 1.11% | 0.81 | 0.78 | 0.37% | −0.37% | 5.2× | 0.42 |
-| PP | 0 | 0.00% | 0.00% | n/a | n/a | 0.00% | 0.00% | 0.0× | n/a |
 
-PD equals P0, and PP never trades, by construction of the frozen IS coefficients rather than by error (App. 4).
+PD equals P0 under the frozen IS coefficients. PP is omitted from this table because its frozen model generated no OOS trades (App. 4).
 
-<div class="row">
-<figure><img src="reports/figures/equity_oos.png"><figcaption>Figure 4. Cumulative net return of the six rows at 1× costs (OOS).</figcaption></figure>
-<figure><img src="reports/figures/pg_oos_events.png"><figcaption>Figure 5. PG net P&amp;L per OOS event (grey ticks: no trade). Two events carry the result.</figcaption></figure>
-</div>
+<figure><img src="reports/figures/equity_oos.png"><figcaption>Figure 3. Cumulative net return, all six rows, OOS (1× costs).</figcaption></figure>
 
-*Better out of sample, but 24 months cannot carry the claim.* PG − P0 is +0.77 [+0.09, +1.69], and PG − PE is +0.70 [+0.02, +1.59]. The result survives real quotes (PX 0.81), and the frozen-model slopes have the predicted signs (\(b = +0.26\), \(c_E = −0.31\)), but neither slope nor its change from IS excludes zero (App. 4). Skew is +2.29: the result comes from a few large wins. Two events (2025-07: +113,622 USD; 2025-11: +90,965 USD) earned more than PG's whole OOS net of +200,726 USD. The DSR is 0.49, and at this Sharpe ratio a \(t\)-statistic of 2 would take 58 months. Three pre-registered kill conditions were met in sample, and a short positive OOS does not undo them: we report the result as unconfirmed and worth monitoring on paper, not as evidence that the gate works.
+*Better out of sample, but 24 months cannot carry the claim.* PG − P0 is +0.77 [+0.09, +1.69], and PG − PE is +0.70 [+0.02, +1.59]. The result survives real quotes (PX 0.81), and descriptive OOS slope estimates have the predicted signs (\(b = +0.26\), \(c_E = −0.31\)), but neither slope nor its change from IS excludes zero (App. 4). Skew is +2.29: the result comes from a few large wins. Two events (2025-07: +113,622 USD; 2025-11: +90,965 USD) earned more than PG's whole OOS net of +200,726 USD. The DSR is 0.49, and at this Sharpe ratio a \(t\)-statistic of 2 would take 58 months. Three performance kill conditions were met in sample, and holiday-window capacity remains unverified (Section 6), and a short positive OOS does not undo them: we report the result as unconfirmed and worth monitoring on paper, not as evidence that the gate works.
 
 <!--/OOS-->
 
+<div class="pagebreak"></div>
+
 ## 5. Risk management
 
-*Limits (fixed before the backtest, same for every row).* Size scales with dose; a full-dose event targets a five-day risk of 0.87% of NAV; legs are capped at 0.75 × NAV and gross exposure at 1.5 × NAV; size is set at entry and never cut mid-event. We disclose that choice rather than add a stop: a 2σ intra-event stop, run as a stress row, would have stopped 2 PG events and moved IS net P&L from −36,979 to −45,029 USD.
+*Limits.* Frozen sizing targets a five-day standard deviation of 0.87% of NAV at full dose, capped at 0.75 × NAV per leg and 1.5 × NAV gross. No mid-event reduction is applied. A separate 2σ stop stress closes 2 PG events, changing IS net P&L from −36,979 to −45,029 USD.
 
-*Correlation, factors and tails.* Long ES / short ZN loses on both legs when stocks fall and bonds rally, and the positive stock–bond correlation of 2022 removed the usual hedge; stress-period P&L by leg is in App. 5. Regressing event returns on Mkt-RF, SMB, HML, Mom and ZN gives an alpha of −0.0002 per event (\(t = −0.44\)), a market \(t\) of 0.35 and \(R^2 = 0.03\): no hidden beta, and no alpha. The bootstrap probability of a 7.5% drawdown within 36 months is 0.0%, and margin-to-equity is 2.0% at the median event (8.7% at most). The largest plausible single-position loss is bounded by size: the ES leg is 11% of NAV at the median trade and 44% at the largest, so a 1987-size −20% day would cost about 2.3% and 8.7% of NAV; the worst realized event lost −116,628 USD. The binding risk is a lack of edge.
+*Correlation and factors.* Negative stock–bond correlation amplifies spread variance at fixed leg volatilities: long ES / short ZN loses on both legs when stocks fall and bonds rally. Higher covariance reduces it (App. 5). Regressing IS event returns on Mkt-RF, SMB, HML, Mom and ZN gives alpha −0.0002 per event (\(t=−0.44\)), market \(t=0.35\), and \(R^2=0.03\). This specification detects neither significant market loading nor alpha.
 
-*Governance.* Trading pauses if the 24-event net P&L falls below −2σ of its forecast or the OOS slopes signal decay, and resumes only after a documented review; parameters are never changed after a loss.
+*Tails and capital.* The historical bootstrap has no 7.5% drawdown breaches over 36 months; it does not cover unseen regimes. Margin-to-equity is 2.0% at the median event (8.7% maximum). An illustrative 20% long-ES shock costs 2.3% of NAV at median size and 8.7% at maximum size, excluding concurrent ZN moves and execution effects; this is not a loss bound. The worst realized event lost −116,628 USD.
+
+*Proposed governance (not backtested).* A 24-event loss or decay trigger would pause trading pending review; thresholds and validation remain prospective.
 
 ## 6. Liquidity and capital
 
-*Execution.* Settlement rows fill at the official settlement marks (ZN 14:59–15:00 ET; ES 15:59:30–16:00 ET). PX instead buys at the 15:59 ET ask and sells at the bid, paying the spread in the fill; its IS Sharpe ratio is 0.06 against PG's −0.05.
+*Execution.* Settlement marks are assumed fills (ZN 15:00 ET; ES 16:15 before 2020-10-26, then 16:00). PX pays the 15:59 bid/ask and excludes early-close entries/exits. On matching dates, PG/PX Sharpe is 0.05/0.06 IS and 0.76/0.81 OOS (A22); unmatched table rows also differ in event coverage.
 
-*Capacity (scenario).* ZN is the binding leg in 72% of events (median execution-minute volume: ES 10,377, ZN 5,959 contracts). The maximum NAV at 1%, 5% and 10% participation is \$43,700,000, \$218,500,000 and \$437,000,000 at the median event, and \$8,236,120 at the 10th percentile at 1%. One contract fits within 1% of volume in 93% of events.
+*Volume-based capacity.* ZN binds in 72% of events. Median NAV limits at 1%, 5% and 10% execution-minute participation are \$43,700,000, \$218,500,000 and \$437,000,000; the 1% limit is \$8,236,120 at the 10th percentile. The 93% one-lot pass rate covers all 64 regular-window events; five early closes lack that window. Holiday capacity is unverified, not observed illiquidity. The registered condition is not satisfied throughout; no liquidity filter is backtested.
 
-*Where the edge erodes.* Costs do not decide this trade: at \$10M they take 2% of gross P&L, and adding square-root market impact moves the IS net Sharpe ratio from −0.05 to −0.06 at \$10M, −0.08 at \$100M and −0.15 at \$1B (App. 6): capacity is set by participation limits, not by cost.
+*Costs and impact.* At \$10M, costs are 2% of the sum of absolute gross event P&Ls, not aggregate gross profit. Square-root impact changes IS Sharpe from −0.05 to −0.06 at \$10M, −0.08 at \$100M and −0.15 at \$1B (App. 6). Negative IS Sharpe means these volume limits do not demonstrate profitable capacity.
 
 ## 7. Limitations and next steps
 
-- *Power.* About 170 events give H1 at most ~20% power across the predicted range and H2 58% power at \(c_E = −0.27\); nulls are upper bounds, not proof of absence.
-- *Every look, counted.* Before pre-registration: a private 2010–22 proxy-data event study and at least 29 month-end and 45 trend and volatility variants (DSR at those counts in App. 2); a masked crash-test run revealed PG's IS trade count and two Sharpe signs (amendment A16), and nothing was changed. After the IS result, on IS data only: the 57 diagnostic series, a replication of [1] (threshold signal replicated, Holm \(p = 0.027\); calendar signal not), a CFTC positioning test (not confirmed) and an 11-trial multi-signal program without a holdout; none changed the registered strategy.
-- *Data, clocks and identification.* Pre-2015 settlements rely on documented vendor fallbacks (App. 1), the ES and bond benchmark clocks moved in 2020–21, and we forecast from prices without observing who traded.<!--OOS--> Seven OOS settlements lack a final flag, including the largest winner's exit; quotes and minute bars confirm that price (amendment A20).<!--/OOS-->
-- *Next.* Pre-register an exit at the month-end close (\(L\)) and test it on new data, since both samples have now been seen; then study order-book depth and execution timing within the window.
+- *Power.* About 170 events give H1 at most ~20% power and H2 58% at \(c_E = −0.27\); wide intervals leave both effects unresolved.
+- *Every look, counted.* Prior work: a private 2010–22 proxy study and at least 29 month-end and 45 trend/volatility variants (DSR in App. 2). A masked run exposed PG's IS count and two Sharpe signs (A16); no changes followed. Post-result IS work: 57 diagnostic series; replication of [1] (threshold Holm \(p = 0.027\), calendar signal unconfirmed); an unconfirmed CFTC test; and 11 multi-signal trials without a holdout. None changed the strategy.
+- *Data, clocks and identification.* Vendor fallbacks (App. 1), changing benchmark clocks and unobserved trader identities limit interpretation.<!--OOS--> Seven OOS settlements lack a final flag, including the largest winner's exit; quotes and minute bars confirm that price (amendment A20).<!--/OOS-->
+- *Next.* Pre-register an exit at the month-end close (\(L\)) and test it on new data, since both samples have been seen; then study depth and execution timing.
 
 <div class="endbody"></div>
 
 ## References
 
 1. Harvey, C. R., Mazzoleni, M., and Melone, A. (2025). *The Unintended Consequences of Rebalancing.* NBER Working Paper w33554.
-2. Brøgger, A. (2021). *The Market Impact of Predictable Flows: Evidence from Leveraged VIX Products.* Working paper.
+2. Brøgger, Søren Bundgaard (2020). *The Market Impact of Predictable Flows: Evidence from Leveraged VIX Products.* Working paper, April 3. [SSRN 3497537](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3497537).
 3. Bessembinder, H., Carrion, A., Tuttle, L., and Venkataraman, K. (2016). Liquidity, resiliency and market quality around predictable trades: Theory and evidence. *Journal of Financial Economics* 121(1), 142–166.
 4. Databento. CME Globex MDP 3.0 (GLBX.MDP3): `definition`, `statistics`, `bbo-1m`, `ohlcv-1m` schemas. databento.com.
 5. French, K. R. Data Library: Fama/French 3 factors (daily) and Momentum factor (daily). mba.tuck.dartmouth.edu/pages/faculty/ken.french.
@@ -127,12 +133,14 @@ PD equals P0, and PP never trades, by construction of the frozen IS coefficients
 
 *App. 1. Vendor data facts (amendment A14).* Before CME's MDP 3.0 feed (2010–2015) the vendor's settlement records carry no "final" flag and open interest is not published. Settlements use the frozen "last record per contract and day" rule, which matches the flagged final on 99.75–100% of contract-days where both exist. Where open interest is missing, contracts are ranked by volume, which picks the same contract on 98–99% of days and 106/106 event dates where both exist. Decision dates are recomputed on the calendar a trader knew at the time (Hurricane Sandy; four vendor-degraded months).
 
-*App. 2. Inference.* Studentized circular month-block bootstrap (block 3, 9,999 draws, seed 20261003). On 500 synthetic AR(1)-GARCH(1,1)-t₅ histories per null run through the real signal code, size is 3.8%–6.4% at nominal 5% (registered band 3–7%). H1 rejects 11% of the time at \(b = 0.05\) and 20% at \(b = 0.12\); H2 rejects 58% at \(c_E = −0.27\) (80%-power minimum detectable effect ≈ 0.37). Ordinary reversal alone makes H1 reject 12.6% of the time, which is why H2 and PP exist. Confirmatory p-values, one-sided: H1 0.523 (wild 0.522, Newey-West(3) 0.536); H2 0.319 (0.317, 0.315). PG's DSR at the logged prior-look counts (35 and 80) is 0.01 and 0.00. PE trades every P0 event at p = 0.66 of the size. Backtrader replay at 2× costs: 85/85 PG, 127/127 P0.
+*App. 2. Inference.* Studentized circular month-block bootstrap (block 3, 9,999 draws, seed 20261003). On 500 synthetic AR(1)-GARCH(1,1)-t₅ histories per null run through the real signal code, size is 3.8%–6.4% at nominal 5% (registered band 3–7%). H1 rejects 11% of the time at \(b = 0.05\) and 20% at \(b = 0.12\); H2 rejects 58% at \(c_E = −0.27\) (80%-power minimum detectable effect ≈ 0.37). Ordinary reversal alone makes H1 reject 12.6% of the time, which is why H2 and PP exist. Confirmatory p-values, one-sided: H1 0.523 (wild 0.522, Newey-West(3) 0.536); H2 0.319 (0.317, 0.315). PG's DSR at the logged prior-look counts (35 and 80) is 0.01 and 0.00. PE scales P0's target size by p = 0.66; whole-contract rounding leaves 103 IS trades versus P0's 104, because one scaled position falls below a tradable lot. Backtrader replay at 2× costs: 85/85 PG, 127/127 P0.
 
-*App. 3. Diagnostics (IS).* With sign and dose frozen at L−12, the dose-weighted cumulative spread path rises from +0.05 σ at L−4 to +0.49 σ at L in 2010–15 and from −0.68 to +0.09 σ in 2016–20; in 2021–24 it is flat (+0.11, +0.09). P0's small positive result is not alpha: the 32 events that buy ES after stocks lagged netted +394,194 USD, the 72 that sell ES −210,669 USD. P0's factor-adjusted alpha is −0.00006 per event (t = −0.13); it loads on ZN (t = 2.03). After 2021-01-14, ZN's 15:00→16:00 ET return on L is +1.6 bp signed toward the flow vs +0.6 bp on other days. PG's ZN loading is −0.010 (t = −0.13), market +0.013. P0's bootstrap drawdown probability is 0.0%; at P0's IS Sharpe a t-statistic of 2 would need 2,677 months. Realized-to-target risk lies in [0.6, 1.5] in 70% of years.
+*App. 3. Diagnostics (IS).* With sign and dose frozen at L−12, the dose-weighted cumulative spread path rises from +0.05 σ at L−4 to +0.49 σ at L in 2010–15 and from −0.68 to +0.09 σ in 2016–20; in 2021–24 it is flat (+0.11, +0.09). P0's small positive result does not establish alpha: the 32 events that buy ES after stocks lagged netted +394,194 USD, the 72 that sell ES −210,669 USD. P0's factor-adjusted alpha is −0.00006 per event (t = −0.13); it loads on ZN (t = 2.03). After 2021-01-14, ZN's 15:00→16:00 ET return on L is +1.6 bp signed toward the flow vs +0.6 bp on other days. PG's ZN loading is −0.010 (t = −0.13), market +0.013. P0 also has no 7.5% drawdown breaches in the 36-month historical bootstrap; unseen regimes are not covered. At P0's IS Sharpe a t-statistic of 2 would need 2,677 months. Realized-to-target risk lies in [0.6, 1.5] in 70% of years.
 
 <!--OOS-->
-*App. 4. OOS details, frozen model.* PD's forecast is almost constant (0.032 + 0.002·dose) and always clears cost, so PD trades every event like P0; PP's (−0.039 −0.057·dose −0.002·A) stayed below cost on every OOS pseudo-event. \(b_{\mathrm{OOS}} = +0.262\) (\(\Delta b = +0.271\), 90% CI [−0.300, +1.314]); \(c_{E,\mathrm{OOS}} = −0.311\) (\(\Delta c = −0.249\), [−0.816, +0.327]).
+<div class="pagebreak"></div>
+
+*App. 4. Frozen trading coefficients and descriptive OOS slopes.* PD's forecast is almost constant (0.032 + 0.002·dose) and always clears cost, so PD trades every event like P0; PP's (−0.039 −0.057·dose −0.002·A) stayed below cost on every OOS pseudo-event. \(b_{\mathrm{OOS}} = +0.262\) (\(\Delta b = +0.271\), 90% CI [−0.300, +1.314]); \(c_{E,\mathrm{OOS}} = −0.311\) (\(\Delta c = −0.249\), [−0.816, +0.327]).
 <!--/OOS-->
 
 *App. 5. Stress periods* (P0 on every valid IS event; event P&L by leg, % of NAV). Spread variance is \(h_E^2\sigma_E^2 + h_B^2\sigma_B^2 - 2h_E h_B\,\mathrm{Cov}(r_E, r_B)\).
@@ -148,9 +156,13 @@ PD equals P0, and PP never trades, by construction of the frozen IS coefficients
 
 *App. 6. Event path and impact.* Margins used (CME, 2026-10-03): ES $26,164, ZN $1,875 per contract. ES settled 16:14:30–16:15 ET before 2020-10-26.
 
-<div class="row">
-<figure><img src="reports/figures/event_path.png"><figcaption>Figure A1. Signed spread path, L−12 to F1+5, by era (sign and dose frozen at L−12).</figcaption></figure>
+<figure><img src="reports/figures/event_path.png"><figcaption>Figure A1. Signed spread path, L−12 to F1+5, by era (event counts in parentheses; sign and dose frozen at L−12).</figcaption></figure>
 <figure><img src="reports/figures/impact.png"><figcaption>Figure A2. PG net Sharpe vs NAV under square-root impact.</figcaption></figure>
-</div>
 
 Full audit (data coverage, decision-date shifts, action ledger, Backtrader reconciliation, inference calibration) and every amendment: `AMENDMENTS.md`, `reports/`.
+
+*App. 7. Additional diagnostics.*
+
+<figure><img src="reports/figures/key_y_vs_a.png"><figcaption>Figure A3. Remaining return against pre-entry progress (IS); bin means with 90% intervals.</figcaption></figure>
+
+<figure><img src="reports/figures/pg_oos_events.png"><figcaption>Figure A4. PG net P&amp;L by OOS event. Grey ticks denote no trade; two events carry the result.</figcaption></figure>

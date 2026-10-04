@@ -26,16 +26,17 @@ def fig_oos_events(res: dict, out: Path) -> Path:
     months = [al["month"][i] for i in idx]
     net = [al["net"][i] / 1e3 for i in idx]
     traded = [bool(al["traded"][i]) for i in idx]
-    fig, ax = plt.subplots(figsize=(3.4, 2.4))
+    fig, ax = plt.subplots(figsize=(6.5, 2.6))
     ax.bar(range(len(idx)), net, color=[ROW_STYLE["PG"][0] if v >= 0 else "#c00000" for v in net], width=0.75)
     ax.scatter([k for k, t in enumerate(traded) if not t], [0] * traded.count(False), marker="|", color="#7f7f7f",
                s=30, label="not traded")
     ax.axhline(0, color="black", lw=0.5)
     ticks = [k for k, m in enumerate(months) if m.endswith(("-01", "-07"))]
     ax.set_xticks(ticks, [("Jan " if months[k].endswith("-01") else "Jul ") + months[k][:4] for k in ticks])
-    ax.set_ylabel("PG net P&L per event, $ thousand")
+    ax.set_ylabel("Net P&L ($000)")
     ax.legend(frameon=False, loc="upper left")
     ax.set_title(f"PG event by event, OOS {res['rows_OOS']['months'][0]} to {res['rows_OOS']['months'][1]}")
+    fig.subplots_adjust(left=0.12, right=0.98, top=0.88, bottom=0.20)
     return _save(fig, out)
 
 

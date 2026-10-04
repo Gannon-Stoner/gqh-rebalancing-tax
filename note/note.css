@@ -31,3 +31,5 @@ math[display="block"] { margin: 1pt 0 2pt 0; }
 em { font-style: italic; }
 .row > figure img { width: 92%; display: block; margin: 0 auto; }
 p, li { orphans: 2; widows: 2; }
+
+@page { @bottom-center { content: counter(page); font-family: "Helvetica Neue", Arial, sans-serif; font-size: 11pt; color: #444; } }
