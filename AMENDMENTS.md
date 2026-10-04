@@ -209,3 +209,13 @@ The messages of the first nine commits were edited to remove a co-author trailer
 | 2a6aef4 | 5826fcc | 95d9015e2db5 | 2026-10-03 17:20:50 -0400 |
 | 57141bc | 5e3dd1b | 8e281b549eaf | 2026-10-03 18:29:08 -0400 |
 | 4e71e7b | a0d10d3 | e9508ccf0706 | 2026-10-03 18:29:08 -0400 |
+
+## A19. In-sample result, reproduction, and out-of-sample plumbing (2026-10-03, between `freeze-is` and `freeze-final`)
+
+- **In-sample run.** `python -m gqh.reproduce` ran once on `freeze-is` (`3aaa2bb`) and wrote `results_is.json` (SHA-256 `3a923e7e…`; `trials.jsonl`). A fresh clone of the pushed `freeze-is` commit, with derived data rebuilt from the raw files, reproduced it byte for byte (run order step 7).
+- **Out-of-sample plumbing (fix: the pipeline could not load OOS files).** `data/download.py` gains the OOS requests, which mirror the IS ones:
+  - Statistics run from 2024-10-02 06:00 UTC, continuing exactly where the IS tail (A10) stopped. Definitions and minute data run from 2024-10-02 00:00 UTC.
+  - All end at 2026-10-03 12:00 UTC, the vendor's available range on 2026-10-03, after the final settlement of Friday 2026-10-02.
+  - The last complete event is Sep-2026, which exits at the 2026-10-01 settlement; the OOS sample is Oct-2024 to Sep-2026.
+  - `gqh.data.build_derived` now concatenates the IS and OOS statistics and definitions files and includes OOS minute files.
+  - With no OOS file present this changes nothing: rebuilding the derived data from the raw files with the new code reproduces `results_is.json` byte for byte. That is the change's test. The OOS guards are unchanged: no OOS request runs, and no OOS date loads, before the `freeze-final` tag.

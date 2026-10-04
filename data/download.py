@@ -4,6 +4,8 @@ Usage:
     python data/download.py               # cost check only: free metadata calls, nothing downloaded
     python data/download.py --pull pilot  # download the pilot requests (paid)
     python data/download.py --pull is     # download the full in-sample requests (paid; resumable)
+    python data/download.py --quote oos   # cost check of the out-of-sample requests only (free)
+    python data/download.py --pull oos    # out of sample, only after the freeze-final tag (paid)
 
 The API key is read from DATABENTO_API_KEY (environment or the repo's .env file);
 it is never printed or written anywhere. Raw data goes to data/raw/ (git-ignored);
@@ -37,6 +39,9 @@ PARENTS = ["ES.FUT", "ZN.FUT"]   # parent symbology: every ES / ZN contract, out
 OUTRIGHTS = [f"{root}{month}{year}" for root in ("ES", "ZN") for month in "HMUZ" for year in range(10)]
 IS_START, IS_END_EXCL, STATS_END_EXCL = "2010-06-06", "2024-10-02", "2024-10-02T06:00:00Z"
 PILOT_START, PILOT_END_EXCL = "2020-10-01", "2021-02-01"   # covers both clock changes and a ZN roll
+# Out of sample (pulled once, after freeze-final): statistics continue where the IS tail stopped; the end is
+# the vendor's available range on 2026-10-03, after Friday 2026-10-02's final settlement (A19).
+OOS_START, OOS_STATS_START, OOS_END_EXCL = "2024-10-02", "2024-10-02T06:00:00Z", "2026-10-03T12:00:00Z"
 PRE_FREEZE_LIMIT = pd.Timestamp("2024-10-02T06:00:00Z")
 
 
@@ -62,6 +67,12 @@ PLAN: dict[str, Request] = {
                            tuple(OUTRIGHTS), "raw_symbol", yearly=True),
     "is_bbo_1m": Request("bbo-1m", IS_START, IS_END_EXCL, "in-sample 1-minute best bid/offer, outrights only",
                          tuple(OUTRIGHTS), "raw_symbol", yearly=True),
+    "oos_definition": Request("definition", OOS_START, OOS_END_EXCL, "out-of-sample contract metadata"),
+    "oos_statistics": Request("statistics", OOS_STATS_START, OOS_END_EXCL, "out-of-sample settlements / OI / volume"),
+    "oos_ohlcv_1m": Request("ohlcv-1m", OOS_START, OOS_END_EXCL, "out-of-sample 1-minute volume, outrights only",
+                            tuple(OUTRIGHTS), "raw_symbol", yearly=True),
+    "oos_bbo_1m": Request("bbo-1m", OOS_START, OOS_END_EXCL, "out-of-sample 1-minute best bid/offer, outrights only",
+                          tuple(OUTRIGHTS), "raw_symbol", yearly=True),
 }
 
 
@@ -109,7 +120,7 @@ def _oos_unlocked() -> bool:
     return "freeze-final" in out.stdout.split()
 
 
-def cost_check(names: list[str] | None = None) -> list[dict]:
+def cost_check(names: list[str] | None = None, out: str = "cost_quotes.json") -> list[dict]:
     import databento as db
 
     client = db.Historical(api_key())
@@ -124,7 +135,7 @@ def cost_check(names: list[str] | None = None) -> list[dict]:
             "billable_bytes": int(client.metadata.get_billable_size(**kw)),
             "records": int(client.metadata.get_record_count(**kw)),
         })
-    (ROOT / "data" / "cost_quotes.json").write_text(json.dumps(
+    (ROOT / "data" / out).write_text(json.dumps(
         {"quoted_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"), "dataset": DATASET,
          "requests": rows}, indent=2))
     return rows
@@ -229,7 +240,8 @@ def fetch_batch(job_id: str) -> list[Path]:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--pull", choices=["pilot", "is"], help="download (paid); default is cost check only")
+    ap.add_argument("--pull", choices=["pilot", "is", "oos"], help="download (paid); default is cost check only")
+    ap.add_argument("--quote", choices=["pilot", "is", "oos"], help="cost check of one group only (free)")
     ap.add_argument("--batch-submit", metavar="REQUEST", help="submit REQUEST from --start to its end as a batch job (paid)")
     ap.add_argument("--start", help="batch start (UTC date)")
     ap.add_argument("--batch-fetch", metavar="JOB_ID", help="download a finished batch job")
@@ -243,7 +255,8 @@ def main() -> None:
     if args.pull:
         pull([k for k in PLAN if k.startswith(args.pull + "_")])
         return
-    rows = cost_check()
+    rows = (cost_check([k for k in PLAN if k.startswith(args.quote + "_")], out=f"cost_quotes_{args.quote}.json")
+            if args.quote else cost_check())
     total = 0.0
     for r in rows:
         total += r["cost_usd"]

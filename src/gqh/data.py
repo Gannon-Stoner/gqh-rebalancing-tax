@@ -52,8 +52,10 @@ def close_window(paths: Iterable[Path], cols: list[str]) -> tuple[pd.DataFrame, 
     return out, counts, on_minute / max(total, 1)
 
 
-BBO_GLOBS = ("is_bbo_1m_*.dbn.zst", "batch/*/*.bbo-1m.dbn.zst")      # streamed years + batch-job months
-OHLCV_GLOBS = ("is_ohlcv_1m_*.dbn.zst", "batch/*/*.ohlcv-1m.dbn.zst")
+BBO_GLOBS = ("is_bbo_1m_*.dbn.zst", "oos_bbo_1m_*.dbn.zst", "batch/*/*.bbo-1m.dbn.zst")   # streamed + batch files
+OHLCV_GLOBS = ("is_ohlcv_1m_*.dbn.zst", "oos_ohlcv_1m_*.dbn.zst", "batch/*/*.ohlcv-1m.dbn.zst")
+STATS_FILES = ("is_statistics", "oos_statistics")      # OOS files exist only after freeze-final (A19)
+DEFS_FILES = ("is_definition", "oos_definition")
 
 
 def _files(raw: Path, globs) -> list[Path]:
@@ -61,11 +63,18 @@ def _files(raw: Path, globs) -> list[Path]:
     return sorted({f for g in globs for f in raw.glob(g)})
 
 
-def build_derived(raw: Path, derived: Path, *, stats: str = "is_statistics", defs: str = "is_definition",
+def _dbn_all(raw: Path, stems) -> pd.DataFrame:
+    """Concatenate the DBN files that exist among ``stems`` (in order)."""
+    stems = (stems,) if isinstance(stems, str) else tuple(stems)
+    frames = [_dbn(raw / f"{s}.dbn.zst") for s in stems if (raw / f"{s}.dbn.zst").is_file()]
+    return frames[0] if len(frames) == 1 else pd.concat(frames)
+
+
+def build_derived(raw: Path, derived: Path, *, stats=STATS_FILES, defs=DEFS_FILES,
                   bbo_glob=BBO_GLOBS, ohlcv_glob=OHLCV_GLOBS) -> dict:
     """Write the derived parquet files; returns record counts for the audit."""
     derived.mkdir(parents=True, exist_ok=True)
-    st, df_ = _dbn(raw / f"{stats}.dbn.zst"), _dbn(raw / f"{defs}.dbn.zst")
+    st, df_ = _dbn_all(raw, stats), _dbn_all(raw, defs)
     info: dict = {}
     last = {}
     vol = daily_volume(_files(raw, ohlcv_glob))
