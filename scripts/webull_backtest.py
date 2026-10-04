@@ -1,21 +1,16 @@
 """Replay PG and P0 in the Webull starter kit's backtest harness and check the note's numbers.
 
-    python scripts/webull_backtest.py          # no data, no download: replays data/replay/ (~1 minute)
+    python data/download.py --quote settlements
+    python data/download.py --pull settlements
+    python scripts/webull_backtest.py
 
-The kit (``third_party/webull_kit``, the track's Webull starter ZIP, vendored unmodified) is Backtrader
-plus a Webull OpenAPI feed. That feed serves US stocks/ETFs only, so it cannot supply ES/ZN futures; this
-runner keeps everything else from the kit (Cerebro, the analyzers ``examples/backtest/main.py`` adds,
-its ``_compute_metrics`` / ``_print_results``, ``RecorderAnalyzer`` and the HTML report) and feeds it
-Databento settlements through ``bt.feeds.PandasData``.
+The unmodified Webull starter kit is vendored in ``third_party/webull_kit``. Its Backtrader
+engine, analyzers and report generator receive licensed Databento ES/ZN settlements through
+``PandasData``; no Webull account or broker connection is used.
 
-Inputs (replay is always the default, independent of locally available data):
-  * ``--data`` mode requires settlement data on disk (``data/derived/`` from the full pipeline, or the four
-    raw files from ``python data/download.py --pull settlements``): the frozen engine is rerun from
-    the settlements (signals, gate, contracts, sizes), and the result must equal the committed replay
-    files in ``data/replay/``. ``--write-replay`` rewrites them instead.
-  * ``--replay`` mode: ``data/replay/`` holds the engine's per-event trade ledger for PG and P0
-    (dates, contracts, sizes), the settlement prices of the held contracts on holding days only, and
-    the session calendar. No signal is recomputed in this mode; the trades are replayed.
+The default (also available as ``--data``) rebuilds signals, gate decisions, contract selection
+and sizes from local licensed settlements, then executes the resulting orders in Backtrader.
+No price data or replay bundle is distributed. Missing inputs stop with download instructions.
 
 Each row runs as one continuous Cerebro backtest over the walk-forward segment (IS and OOS) at a $10M
 NAV, one feed per held contract, fills at the settlement (cheat-on-close), frozen per-side costs as a
@@ -35,6 +30,7 @@ import json
 import math
 import os
 import sys
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -49,6 +45,7 @@ sys.path[:0] = [str(KIT), str(KIT / "examples" / "backtest")]
 
 import backtrader as bt  # noqa: E402
 
+
 from main import _compute_metrics, _print_results  # noqa: E402  (the kit's metric/summary code)
 from webull_bt.logging_utils import setup_logging  # noqa: E402
 from webull_bt.visualize import RecorderAnalyzer, render_report  # noqa: E402
@@ -56,12 +53,12 @@ from webull_bt.visualize import RecorderAnalyzer, render_report  # noqa: E402
 from gqh.config import frozen_config  # noqa: E402
 from gqh.engine import side_cost  # noqa: E402
 from gqh.metrics import row_metrics  # noqa: E402
+from gqh.panel import oos_unlocked  # noqa: E402
 from gqh.reproduce import load_margins  # noqa: E402
 
 NAV = 10e6                      # the note's reference NAV
 ROWS = ("PG", "P0")
 CHECKED = ("trades", "ann_return", "ann_vol", "sharpe", "max_drawdown", "worst_month", "turnover")
-REPLAY = ROOT / "data" / "replay"
 LEDGER_COLS = ["month", "sample", "entry", "exit", "traded", "es_id", "zn_id", "q_es", "q_zn", "gross_nav", "cost",
                "pnl"]
 RAW_SETTLEMENT_FILES = ("is_definition", "is_statistics", "oos_definition", "oos_statistics")
@@ -77,6 +74,9 @@ class Inputs:
 
 # -- inputs ------------------------------------------------------------------------------------------
 def _settlement_panels() -> dict[str, pd.DataFrame] | None:
+    if not oos_unlocked(ROOT):
+        raise SystemExit("PROTOCOL TAG MISSING: clone the Git repository with its freeze-final tag "
+                         "(or run `git fetch --tags`). The frozen loader keeps OOS locked without it.")
     full = ROOT / "data" / "derived"
     if all((full / f"settlements_{r}.parquet").is_file() for r in ("ES", "ZN")):
         return {r: pd.read_parquet(full / f"settlements_{r}.parquet") for r in ("ES", "ZN")}
@@ -118,39 +118,16 @@ def from_engine(panels: dict[str, pd.DataFrame]) -> Inputs:
     return Inputs(ledgers, prices, sessions, "data: engine rerun from settlements")
 
 
-def replay_texts(inp: Inputs) -> dict[str, str]:
-    """The committed replay files, as text (deterministic formatting)."""
-    out = {}
-    for row, led in inp.ledgers.items():
-        t = led.copy()
-        t["month"] = t["month"].astype(str)
-        for c in ("entry", "exit"):
-            t[c] = pd.to_datetime(t[c]).dt.strftime("%Y-%m-%d")
-        out[f"ledger_{row}.csv"] = t.to_csv(index=False, float_format="%.10g")
-    p = inp.prices.copy()
-    p["date"] = pd.to_datetime(p["date"]).dt.strftime("%Y-%m-%d")
-    out["settlements_holding_days.csv"] = p.to_csv(index=False, float_format="%.10g")
-    out["sessions.csv"] = pd.DataFrame({"date": inp.sessions.strftime("%Y-%m-%d")}).to_csv(index=False)
-    return out
-
-
-def from_replay(texts: dict[str, str] | None = None) -> Inputs:
-    """Read the replay tables (from disk, or from ``texts`` so both modes run on identical inputs)."""
-    read = (lambda n: pd.read_csv(io.StringIO(texts[n]))) if texts else (lambda n: pd.read_csv(REPLAY / n))
-    ledgers = {}
-    for row in ROWS:
-        led = read(f"ledger_{row}.csv")
-        led["month"] = pd.PeriodIndex(led["month"], freq="M")
-        for c in ("entry", "exit"):
-            led[c] = pd.to_datetime(led[c])
-        if not led["traded"].isin([True, False]).all():
-            raise ValueError(f"{row}: traded must contain only True or False")
-        led["traded"] = led["traded"].astype(bool)
-        ledgers[row] = led
-    prices = read("settlements_holding_days.csv")
-    prices["date"] = pd.to_datetime(prices["date"])
-    sessions = pd.DatetimeIndex(pd.to_datetime(read("sessions.csv")["date"]))
-    return Inputs(ledgers, prices, sessions, "replay: committed trade ledger and holding-day settlements")
+def load_inputs() -> Inputs:
+    """Rebuild from licensed local data; never substitute a saved trade ledger."""
+    panels = _settlement_panels()
+    if panels is None:
+        raise SystemExit(
+            "DATA MISSING: licensed settlement data is required. Set DATABENTO_API_KEY in .env, "
+            "run `python data/download.py --quote settlements`, then "
+            "`python data/download.py --pull settlements`, and rerun this command. "
+            "No download or charge is initiated by this runner.")
+    return from_engine(panels)
 
 
 def validate_inputs(inp: Inputs) -> None:
@@ -272,7 +249,12 @@ def run_row(led: pd.DataFrame, inp: Inputs, cfg, margins: dict, k: float = 1.0, 
     cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name="sharpe", timeframe=bt.TimeFrame.Days, compression=1,
                         riskfreerate=0.0, annualize=True)
     cerebro.addanalyzer(RecorderAnalyzer, _name="recorder")
-    strat = cerebro.run(runonce=False)[0]
+    with warnings.catch_warnings():
+        # The legacy kit clock emits this deprecation on every Python 3.14 bar.
+        # Suppress only that known warning; engine errors and other warnings remain visible.
+        warnings.filterwarnings("ignore", message=r"datetime\.datetime\.utcnow\(\) is deprecated.*",
+                                category=DeprecationWarning)
+        strat = cerebro.run(runonce=False)[0]
     metrics = _compute_metrics(cerebro, strat, NAV)
     if verbose:
         _print_results(strat, metrics)
@@ -289,18 +271,12 @@ def run_row(led: pd.DataFrame, inp: Inputs, cfg, margins: dict, k: float = 1.0, 
 # -- main --------------------------------------------------------------------------------------------
 def parse_args(argv: list[str] | None = None):
     ap = argparse.ArgumentParser(description=(
-        "Verify PG/P0 at 1x costs in the Webull starter kit's Backtrader harness. "
-        "Default: offline settlement replay of frozen trades; no keys or downloads."))
-    mode = ap.add_mutually_exclusive_group()
-    mode.add_argument("--replay", action="store_true", help="replay committed trades (default; no signals recomputed)")
-    mode.add_argument("--data", action="store_true", help="rerun signals from local settlements, then reconcile the replay")
-    ap.add_argument("--write-replay", action="store_true", help="maintainer option: replace replay inputs (requires --data)")
+        "Rebuild PG/P0 from licensed local settlements and verify 1x costs in the Webull starter kit. "
+        "Download instructions: python data/download.py --quote settlements, then --pull settlements."))
+    ap.add_argument("--data", action="store_true", help="rebuild from local settlements (the default)")
     ap.add_argument("--output-dir", type=Path, default=ROOT / "reports", help="report directory (default: reports/)")
     ap.add_argument("--verbose", action="store_true", help="include the kit's trade-by-trade log")
-    args = ap.parse_args(argv)
-    if args.write_replay and not args.data:
-        ap.error("--write-replay requires --data")
-    return args
+    return ap.parse_args(argv)
 
 
 def reconcile_events(row: str, engine: pd.Series, replay: pd.Series, failures: list[str]) -> pd.Series:
@@ -377,14 +353,14 @@ th,td{{padding:.65rem .5rem;border-bottom:1px solid #cbd5e1;text-align:right}}th
 <p class="status">{status}: PG and P0, 1× frozen costs, $10 million reference NAV.</p>{errors}
 <p><strong>Input mode:</strong> {html.escape(inp.mode)}.</p>
 <p>Backtrader replays the frozen ES/ZN orders at settlement with the registered per-side costs.
-This is an accounting and fill reconciliation. In default replay mode, signals, contract selection,
-and sizing are supplied by the committed ledger, not independently recomputed. It is not a Webull
-live-data or executable bid/ask backtest.</p>
+Signals, contract selection and sizing are rebuilt from local licensed settlements using the frozen
+research engine. Backtrader independently checks fills and accounting at assumed settlement marks.
+This is not a Webull live-data or executable bid/ask backtest.</p>
 <h2>Metrics checked against the Quant Note's results.json</h2><div class="table"><table><thead><tr>
 <th>Row</th><th>Sample</th><th>Trades</th><th>Return/yr</th><th>Vol/yr</th><th>Sharpe</th><th>Max DD</th>
 <th>Worst month</th><th>Turnover/yr</th><th>Metrics</th></tr></thead><tbody>{''.join(rows)}</tbody></table></div>
 <p class="muted">Net monthly event returns, fixed NAV, no compounding. Sharpe uses monthly returns annualized by √12.
-Trades and turnover use the frozen ledger; the six-row strategy study, inference, capacity and 2× costs
+Trades and turnover use the rebuilt ledger; the six-row strategy study, inference, capacity and 2× costs
 are outside this PG/P0 1× check. IS and OOS dates follow results.json.</p><ul>{checks}</ul>
 <h2>Daily settlement equity from Backtrader</h2>
 <div style="overflow-x:auto" role="img" aria-label="PG and P0 daily cumulative returns on fixed NAV, with the out-of-sample period shaded from October 2024">
@@ -410,26 +386,7 @@ def main(argv: list[str] | None = None) -> None:
     margins = load_margins(ROOT) or {"ES": 26164.0, "ZN": 1875.0}
     failures = []
 
-    panels = _settlement_panels() if args.data else None
-    if args.data and panels is None:
-        raise SystemExit("DATA MISSING: --data requires local settlement panels or all four settlement raw files. "
-                         "Use --replay for the committed offline verification.")
-    if panels is None:
-        inp = from_replay()
-    else:
-        texts = replay_texts(from_engine(panels))
-        if args.write_replay:
-            REPLAY.mkdir(parents=True, exist_ok=True)
-            for name, text in texts.items():
-                (REPLAY / name).write_text(text)
-            print(f"wrote {sorted(texts)} to {REPLAY.relative_to(ROOT)}/")
-        stale = [n for n, t in texts.items() if not (REPLAY / n).is_file() or (REPLAY / n).read_text() != t]
-        if stale:
-            failures.append(f"committed replay files differ from the engine rerun: {stale}")
-        else:
-            print("engine rerun from settlements reproduces every committed replay file byte for byte")
-        inp = from_replay(texts)
-        inp.mode = "data: engine rerun from settlements (" + ("DIFFERS FROM" if stale else "equals") + " data/replay/)"
+    inp = load_inputs()
     try:
         validate_inputs(inp)
     except ValueError as exc:
@@ -437,7 +394,7 @@ def main(argv: list[str] | None = None) -> None:
     output_dir = args.output_dir.expanduser().resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     print(f"input mode: {inp.mode}")
-    scope = ("signals rerun from local settlements" if args.data else "frozen trades replayed; signals not recomputed")
+    scope = "signals, contract selection and sizes rebuilt from licensed local settlements"
     print(f"Checking PG/P0 at 1x costs against results.json; {scope}.", flush=True)
 
     months = {s: pd.period_range(*results[f"rows_{s}"]["months"], freq="M") for s in ("IS", "OOS")}
@@ -488,8 +445,8 @@ def main(argv: list[str] | None = None) -> None:
           "Generated by `scripts/webull_backtest.py` (amendment A21). Engine, analyzers, metric code and HTML report:",
           "the Webull starter kit's (`third_party/webull_kit`). Feed: Databento settlements via `PandasData` (the kit's",
           "Webull OpenAPI feed has no ES/ZN futures). Every metric below is computed from Backtrader's per-event P&L",
-          "with the note's metric code and checked against `results.json` (trades and turnover use the frozen ledger).",
-          f"Input mode: {inp.mode}. Default replay does not independently recompute signals, selection or sizing.",
+          "with the note's metric code and checked against `results.json` (trades and turnover use the rebuilt ledger).",
+          f"Input mode: {inp.mode}. Signals, selection and sizing are rebuilt before the Backtrader check.",
           "Scope: PG and P0, IS and OOS, 1x costs only; not PX bid/ask execution, inference or capacity.", "",
           "| Row | Sample | Trades | Ret/yr | Vol/yr | Sharpe 1× | Max DD | Worst month | Turnover/yr | = results.json |",
           "|---|---|---|---|---|---|---|---|---|---|", *lines, ""]

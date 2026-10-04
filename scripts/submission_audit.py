@@ -1,6 +1,6 @@
-"""Reporting-only audit of matched PG/PX events, requiring no licensed raw data.
+"""Reporting-only audit of matched PG/PX events, rebuilt from local licensed settlements.
 
-Recomputes PG metrics from its committed ledger, then excludes the same
+Recomputes PG metrics from its rebuilt ledger, then excludes the same
 early-close events that PX cannot trade. Official results and decisions stay
 unchanged. PX metrics are read from results.json, not independently recomputed.
 """
@@ -69,9 +69,9 @@ def audit(ledger: pd.DataFrame, results: dict) -> dict:
             "archived_PG_capacity_one_lot_pass_share": section["capacity"]["PG_settle_windows"]["lot_at_1pct_share"],
         }
     return {"status": "post-result reporting audit; no strategy or official-result changes",
-            "scope": "PG recomputed from committed ledger at 1x costs; PX read from official results. "
+            "scope": "PG recomputed from a locally rebuilt ledger at 1x costs; PX read from official results. "
                      "Calendar exclusions match PX's recorded exclusions; full monthly ranges retain flat months. "
-                     "This does not recompute quotes, signals, volume or holiday capacity.",
+                     "Signals and sizes are rebuilt; quotes, volume and holiday capacity are not recomputed.",
             "samples": samples}
 
 
@@ -79,11 +79,22 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, default=ROOT / "reports/final_audit.json")
     args = parser.parse_args()
-    ledger_path, results_path = ROOT / "data/replay/ledger_PG.csv", ROOT / "results.json"
-    report = audit(pd.read_csv(ledger_path), json.loads(results_path.read_text()))
+    from webull_backtest import load_inputs, validate_inputs
+    inp = load_inputs()
+    validate_inputs(inp)
+    ledger = inp.ledgers["PG"]
+    results_path = ROOT / "results.json"
+    report = audit(ledger, json.loads(results_path.read_text()))
+    traded = ledger.loc[ledger["traded"]]
+    leg = sorted(traded["gross_nav"] / 2)
+    report["pg_size"] = {
+        "es_leg_median": leg[len(leg) // 2], "es_leg_max": leg[-1],
+        "crash_loss_median": 0.20 * leg[len(leg) // 2], "crash_loss_max": 0.20 * leg[-1],
+        "worst_event_usd": float(traded["pnl"].min())}
+    report["input_mode"] = inp.mode
     report["source_sha256"] = {
         str(path.relative_to(ROOT)): hashlib.sha256(path.read_bytes()).hexdigest()
-        for path in (ledger_path, results_path, ROOT / "config/frozen.yaml")}
+        for path in (results_path, ROOT / "config/frozen.yaml", ROOT / "data/manifest.json")}
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(report, indent=2, sort_keys=True, allow_nan=False) + "\n")
     for sample, values in report["samples"].items():

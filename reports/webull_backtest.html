@@ -7,16 +7,16 @@ th,td{padding:.65rem .5rem;border-bottom:1px solid #cbd5e1;text-align:right}th:f
 .table{overflow-x:auto}a{color:#075985}code{font-size:.9em}.muted{color:#475569}
 </style></head><body><h1>Webull starter kit replay verification</h1>
 <p class="status">PASS: PG and P0, 1× frozen costs, $10 million reference NAV.</p>
-<p><strong>Input mode:</strong> replay: committed trade ledger and holding-day settlements.</p>
+<p><strong>Input mode:</strong> data: engine rerun from settlements.</p>
 <p>Backtrader replays the frozen ES/ZN orders at settlement with the registered per-side costs.
-This is an accounting and fill reconciliation. In default replay mode, signals, contract selection,
-and sizing are supplied by the committed ledger, not independently recomputed. It is not a Webull
-live-data or executable bid/ask backtest.</p>
+Signals, contract selection and sizing are rebuilt from local licensed settlements using the frozen
+research engine. Backtrader independently checks fills and accounting at assumed settlement marks.
+This is not a Webull live-data or executable bid/ask backtest.</p>
 <h2>Metrics checked against the Quant Note's results.json</h2><div class="table"><table><thead><tr>
 <th>Row</th><th>Sample</th><th>Trades</th><th>Return/yr</th><th>Vol/yr</th><th>Sharpe</th><th>Max DD</th>
 <th>Worst month</th><th>Turnover/yr</th><th>Metrics</th></tr></thead><tbody><tr><td>PG</td><td>IS</td><td>69</td><td>-0.04%</td><td>0.87%</td><td>-0.05</td><td>2.55%</td><td>-1.17%</td><td>4.4×</td><td>PASS</td></tr><tr><td>PG</td><td>OOS</td><td>16</td><td>1.00%</td><td>1.11%</td><td>0.91</td><td>0.35%</td><td>-0.35%</td><td>5.6×</td><td>PASS</td></tr><tr><td>P0</td><td>IS</td><td>104</td><td>0.20%</td><td>1.52%</td><td>0.13</td><td>2.23%</td><td>-1.17%</td><td>9.1×</td><td>PASS</td></tr><tr><td>P0</td><td>OOS</td><td>23</td><td>0.18%</td><td>1.34%</td><td>0.14</td><td>1.30%</td><td>-0.62%</td><td>8.9×</td><td>PASS</td></tr></tbody></table></div>
 <p class="muted">Net monthly event returns, fixed NAV, no compounding. Sharpe uses monthly returns annualized by √12.
-Trades and turnover use the frozen ledger; the six-row strategy study, inference, capacity and 2× costs
+Trades and turnover use the rebuilt ledger; the six-row strategy study, inference, capacity and 2× costs
 are outside this PG/P0 1× check. IS and OOS dates follow results.json.</p><ul><li>PG: 85/85 event P&amp;Ls match to $0.01; largest gap $0.0000.</li><li>P0: 127/127 event P&amp;Ls match to $0.01; largest gap $0.0000.</li></ul>
 <h2>Daily settlement equity from Backtrader</h2>
 <div style="overflow-x:auto" role="img" aria-label="PG and P0 daily cumulative returns on fixed NAV, with the out-of-sample period shaded from October 2024">
@@ -61,18 +61,18 @@ L 746.029994 245.269916
 L 746.029994 3.00024
 L 618.466169 3.00024
 z
-" clip-path="url(#p1e235c8303)" style="fill: #cbd5e1; opacity: 0.28; stroke: #cbd5e1; stroke-linejoin: miter"/>
+" clip-path="url(#pb1f65a4214)" style="fill: #cbd5e1; opacity: 0.28; stroke: #cbd5e1; stroke-linejoin: miter"/>
    </g>
    <g id="matplotlib.axis_1">
     <g id="xtick_1">
      <g id="line2d_1">
       <defs>
-       <path id="mf32218a4ae" d="M 0 0
+       <path id="mbb1517cd13" d="M 0 0
 L 0 3.5
 " style="stroke: #000000; stroke-width: 0.8"/>
       </defs>
       <g>
-       <use xlink:href="#mf32218a4ae" x="60.745262" y="245.269916" style="stroke: #000000; stroke-width: 0.8"/>
+       <use xlink:href="#mbb1517cd13" x="60.745262" y="245.269916" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_1">
@@ -82,7 +82,7 @@ L 0 3.5
     <g id="xtick_2">
      <g id="line2d_2">
       <g>
-       <use xlink:href="#mf32218a4ae" x="188.309087" y="245.269916" style="stroke: #000000; stroke-width: 0.8"/>
+       <use xlink:href="#mbb1517cd13" x="188.309087" y="245.269916" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_2">
@@ -92,7 +92,7 @@ L 0 3.5
     <g id="xtick_3">
      <g id="line2d_3">
       <g>
-       <use xlink:href="#mf32218a4ae" x="315.698405" y="245.269916" style="stroke: #000000; stroke-width: 0.8"/>
+       <use xlink:href="#mbb1517cd13" x="315.698405" y="245.269916" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_3">
@@ -102,7 +102,7 @@ L 0 3.5
     <g id="xtick_4">
      <g id="line2d_4">
       <g>
-       <use xlink:href="#mf32218a4ae" x="443.26223" y="245.269916" style="stroke: #000000; stroke-width: 0.8"/>
+       <use xlink:href="#mbb1517cd13" x="443.26223" y="245.269916" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_4">
@@ -112,7 +112,7 @@ L 0 3.5
     <g id="xtick_5">
      <g id="line2d_5">
       <g>
-       <use xlink:href="#mf32218a4ae" x="570.651548" y="245.269916" style="stroke: #000000; stroke-width: 0.8"/>
+       <use xlink:href="#mbb1517cd13" x="570.651548" y="245.269916" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_5">
@@ -122,7 +122,7 @@ L 0 3.5
     <g id="xtick_6">
      <g id="line2d_6">
       <g>
-       <use xlink:href="#mf32218a4ae" x="698.215373" y="245.269916" style="stroke: #000000; stroke-width: 0.8"/>
+       <use xlink:href="#mbb1517cd13" x="698.215373" y="245.269916" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_6">
@@ -135,16 +135,16 @@ L 0 3.5
      <g id="line2d_7">
       <path d="M 42.083599 232.715375
 L 752.99976 232.715375
-" clip-path="url(#p1e235c8303)" style="fill: none; stroke: #b0b0b0; stroke-opacity: 0.2; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#pb1f65a4214)" style="fill: none; stroke: #b0b0b0; stroke-opacity: 0.2; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_8">
       <defs>
-       <path id="maf8e138358" d="M 0 0
+       <path id="m4700363141" d="M 0 0
 L -3.5 0
 " style="stroke: #000000; stroke-width: 0.8"/>
       </defs>
       <g>
-       <use xlink:href="#maf8e138358" x="42.083599" y="232.715375" style="stroke: #000000; stroke-width: 0.8"/>
+       <use xlink:href="#m4700363141" x="42.083599" y="232.715375" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_7">
@@ -155,11 +155,11 @@ L -3.5 0
      <g id="line2d_9">
       <path d="M 42.083599 191.356893
 L 752.99976 191.356893
-" clip-path="url(#p1e235c8303)" style="fill: none; stroke: #b0b0b0; stroke-opacity: 0.2; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#pb1f65a4214)" style="fill: none; stroke: #b0b0b0; stroke-opacity: 0.2; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_10">
       <g>
-       <use xlink:href="#maf8e138358" x="42.083599" y="191.356893" style="stroke: #000000; stroke-width: 0.8"/>
+       <use xlink:href="#m4700363141" x="42.083599" y="191.356893" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_8">
@@ -170,11 +170,11 @@ L 752.99976 191.356893
      <g id="line2d_11">
       <path d="M 42.083599 149.998411
 L 752.99976 149.998411
-" clip-path="url(#p1e235c8303)" style="fill: none; stroke: #b0b0b0; stroke-opacity: 0.2; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#pb1f65a4214)" style="fill: none; stroke: #b0b0b0; stroke-opacity: 0.2; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_12">
       <g>
-       <use xlink:href="#maf8e138358" x="42.083599" y="149.998411" style="stroke: #000000; stroke-width: 0.8"/>
+       <use xlink:href="#m4700363141" x="42.083599" y="149.998411" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_9">
@@ -185,11 +185,11 @@ L 752.99976 149.998411
      <g id="line2d_13">
       <path d="M 42.083599 108.639929
 L 752.99976 108.639929
-" clip-path="url(#p1e235c8303)" style="fill: none; stroke: #b0b0b0; stroke-opacity: 0.2; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#pb1f65a4214)" style="fill: none; stroke: #b0b0b0; stroke-opacity: 0.2; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_14">
       <g>
-       <use xlink:href="#maf8e138358" x="42.083599" y="108.639929" style="stroke: #000000; stroke-width: 0.8"/>
+       <use xlink:href="#m4700363141" x="42.083599" y="108.639929" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_10">
@@ -200,11 +200,11 @@ L 752.99976 108.639929
      <g id="line2d_15">
       <path d="M 42.083599 67.281447
 L 752.99976 67.281447
-" clip-path="url(#p1e235c8303)" style="fill: none; stroke: #b0b0b0; stroke-opacity: 0.2; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#pb1f65a4214)" style="fill: none; stroke: #b0b0b0; stroke-opacity: 0.2; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_16">
       <g>
-       <use xlink:href="#maf8e138358" x="42.083599" y="67.281447" style="stroke: #000000; stroke-width: 0.8"/>
+       <use xlink:href="#m4700363141" x="42.083599" y="67.281447" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_11">
@@ -215,11 +215,11 @@ L 752.99976 67.281447
      <g id="line2d_17">
       <path d="M 42.083599 25.922965
 L 752.99976 25.922965
-" clip-path="url(#p1e235c8303)" style="fill: none; stroke: #b0b0b0; stroke-opacity: 0.2; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#pb1f65a4214)" style="fill: none; stroke: #b0b0b0; stroke-opacity: 0.2; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_18">
       <g>
-       <use xlink:href="#maf8e138358" x="42.083599" y="25.922965" style="stroke: #000000; stroke-width: 0.8"/>
+       <use xlink:href="#m4700363141" x="42.083599" y="25.922965" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_12">
@@ -769,7 +769,7 @@ L 745.680982 86.521154
 L 745.855488 82.106137
 L 746.029994 82.275189
 L 746.029994 82.275189
-" clip-path="url(#p1e235c8303)" style="fill: none; stroke: #1466a3; stroke-width: 1.6; stroke-linecap: square"/>
+" clip-path="url(#pb1f65a4214)" style="fill: none; stroke: #1466a3; stroke-width: 1.6; stroke-linecap: square"/>
    </g>
    <g id="line2d_20">
     <path d="M 49.053366 149.998411
@@ -1576,17 +1576,17 @@ L 745.680982 63.353167
 L 745.855488 58.938149
 L 746.029994 59.107202
 L 746.029994 59.107202
-" clip-path="url(#p1e235c8303)" style="fill: none; stroke: #b55b13; stroke-width: 1.6; stroke-linecap: square"/>
+" clip-path="url(#pb1f65a4214)" style="fill: none; stroke: #b55b13; stroke-width: 1.6; stroke-linecap: square"/>
    </g>
    <g id="line2d_21">
     <path d="M 618.466169 245.269916
 L 618.466169 3.00024
-" clip-path="url(#p1e235c8303)" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #64748b"/>
+" clip-path="url(#pb1f65a4214)" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #64748b"/>
    </g>
    <g id="line2d_22">
     <path d="M 42.083599 149.998411
 L 752.99976 149.998411
-" clip-path="url(#p1e235c8303)" style="fill: none; stroke: #64748b; stroke-width: 0.7; stroke-linecap: square"/>
+" clip-path="url(#pb1f65a4214)" style="fill: none; stroke: #64748b; stroke-width: 0.7; stroke-linecap: square"/>
    </g>
    <g id="patch_4">
     <path d="M 42.083599 245.269916
@@ -1632,12 +1632,11 @@ z
   </g>
  </g>
  <defs>
-  <clipPath id="p1e235c8303">
+  <clipPath id="pb1f65a4214">
    <rect x="42.083599" y="3.00024" width="710.916161" height="242.269676"/>
   </clipPath>
  </defs>
-</svg>
-</div>
+</svg></div>
 <p class="muted">Each curve uses the broker's recorded daily equity, net of 1× costs, divided by the fixed
 $10 million starting NAV. This shows mark-to-market changes during each holding period. The table above
 instead books each event's total P&amp;L in its event month; daily drawdowns and Sharpe therefore differ.

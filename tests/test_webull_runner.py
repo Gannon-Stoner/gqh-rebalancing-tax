@@ -68,17 +68,43 @@ def test_missing_zero_pnl_event_is_still_a_failure():
     assert len(failures) == 1
 
 
-def test_cli_default_is_replay_and_write_requires_data():
+def test_cli_rebuilds_by_default_and_rejects_removed_bundle_options():
     assert not W.parse_args([]).data
-    assert W.parse_args(["--replay"]).replay
-    assert W.parse_args(["--data", "--write-replay"]).write_replay
-    for argv in (["--replay", "--data"], ["--write-replay"], ["--repaly"]):
+    assert W.parse_args(["--data"]).data
+    for argv in (["--replay"], ["--write-replay"], ["--repaly"]):
         with pytest.raises(SystemExit) as exc:
             W.parse_args(argv)
         assert exc.value.code == 2
 
 
-def test_data_mode_does_not_silently_fall_back_to_replay(monkeypatch):
+@pytest.mark.parametrize("argv", [[], ["--data"]])
+def test_missing_data_never_falls_back_to_a_ledger(monkeypatch, argv):
     monkeypatch.setattr(W, "_settlement_panels", lambda: None)
     with pytest.raises(SystemExit, match="DATA MISSING"):
-        W.main(["--data"])
+        W.main(argv)
+
+
+def test_inputs_are_rebuilt_without_any_replay_directory(monkeypatch, inputs, tmp_path):
+    panels = {"ES": object(), "ZN": object()}
+    monkeypatch.setattr(W, "ROOT", tmp_path)
+    monkeypatch.setattr(W, "_settlement_panels", lambda: panels)
+    seen = []
+    def rebuild(actual):
+        seen.append(actual)
+        return inputs
+    monkeypatch.setattr(W, "from_engine", rebuild)
+    assert W.load_inputs() is inputs
+    assert seen == [panels]
+    assert not (tmp_path / "data/replay").exists()
+
+
+def test_missing_protocol_tag_stops_before_loading_partial_history(monkeypatch):
+    monkeypatch.setattr(W, "oos_unlocked", lambda root: False)
+    with pytest.raises(SystemExit, match="PROTOCOL TAG MISSING"):
+        W._settlement_panels()
+
+
+def test_summary_equity_curve_renders_without_a_replay_bundle():
+    curve = {"datetime": ["2024-09-01", "2024-11-01"], "value": [W.NAV, W.NAV + 1000]}
+    svg = W.equity_svg({"PG": curve, "P0": curve}, pd.Timestamp("2024-10-01"))
+    assert "<svg" in svg and "PG strategy" in svg and "P0 always-trade" in svg

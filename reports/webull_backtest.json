@@ -42,7 +42,7 @@
       "results_json": 104
      },
      "turnover": {
-      "backtrader": 9.120746389111112,
+      "backtrader": 9.12074638888889,
       "results_json": 9.120746389
      },
      "worst_month": {
@@ -209,7 +209,7 @@
   ],
   "cost_multiplier": 1.0,
   "failures": [],
-  "input_mode": "replay: committed trade ledger and holding-day settlements",
+  "input_mode": "data: engine rerun from settlements",
   "passed": true
  }
 }

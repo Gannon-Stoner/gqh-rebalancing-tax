@@ -1,4 +1,12 @@
 {
+  "input_mode": "data: engine rerun from settlements",
+  "pg_size": {
+    "crash_loss_max": 0.08733712500000002,
+    "crash_loss_median": 0.022554,
+    "es_leg_max": 0.436685625,
+    "es_leg_median": 0.11277,
+    "worst_event_usd": -116627.5
+  },
   "samples": {
     "IS": {
       "archived_PG_capacity_one_lot_pass_share": 0.9275362319,
@@ -122,10 +130,10 @@
       }
     }
   },
-  "scope": "PG recomputed from committed ledger at 1x costs; PX read from official results. Calendar exclusions match PX's recorded exclusions; full monthly ranges retain flat months. This does not recompute quotes, signals, volume or holiday capacity.",
+  "scope": "PG recomputed from a locally rebuilt ledger at 1x costs; PX read from official results. Calendar exclusions match PX's recorded exclusions; full monthly ranges retain flat months. Signals and sizes are rebuilt; quotes, volume and holiday capacity are not recomputed.",
   "source_sha256": {
     "config/frozen.yaml": "0eede8ec46f7985ad5ee335dec26e2f8e227c74affd97edccdf1acd0a6366dbe",
-    "data/replay/ledger_PG.csv": "cafd5edf82be31817ce641d87467046ad104b4bf9f66ab4e7857f015e4f14504",
+    "data/manifest.json": "27a25263e7235af189f6f121eaabfca8d49c927a940ca1ba713f7b67184efe42",
     "results.json": "ecc8c8048149b74d6c647ceee0e94bb2830096c5838e61bcb04e894e74773b7c"
   },
   "status": "post-result reporting audit; no strategy or official-result changes"

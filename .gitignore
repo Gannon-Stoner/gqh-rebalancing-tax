@@ -15,3 +15,6 @@ reports/*.log
 reports/webull_kit_*.html
 .webull_kit/
 data/derived_settlements/
+
+# Licensed replay inputs are generated locally only; never publish them.
+data/replay/

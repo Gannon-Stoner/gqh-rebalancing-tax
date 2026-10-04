@@ -8,7 +8,7 @@ Start with the [Quant Note](note/note.pdf): five main pages, followed by referen
 
 ## Judges: reproduce the headline results
 
-Use **Python 3.11–3.14**. The final workflow was tested in a fresh Python 3.14.7 environment, without API keys or the full market-data history. The first installation needs internet; the replay and its summary work offline afterward.
+Use **Python 3.11–3.14**. Clone with Git and its protocol tags; a source ZIP cannot unlock the frozen OOS loader. The workflow requires a Databento account with access to the ES/ZN settlement data. API credentials stay in your local `.env`; source prices are downloaded locally and are not distributed with this submission. No Webull account is needed. After installation and data acquisition, the backtest and its summary work offline.
 
 ```bash
 git clone https://github.com/Gannon-Stoner/gqh-rebalancing-tax.git
@@ -17,10 +17,15 @@ python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
 python -m pip install -e .
-python scripts/webull_backtest.py --replay
+cp .env.example .env
+# Set DATABENTO_API_KEY in your local .env.
+python data/download.py --quote settlements
+# Review the quote before downloading (the next command can incur a charge):
+python data/download.py --pull settlements
+python scripts/webull_backtest.py
 ```
 
-On Windows, create the environment with `py -3.14 -m venv .venv` and activate it with `.venv\Scripts\Activate.ps1` in PowerShell. Then use the same `python` commands.
+On Windows, create the environment with `py -3.14 -m venv .venv` and activate it with `.venv\Scripts\Activate.ps1` in PowerShell. Use `Copy-Item .env.example .env` instead of `cp`, then use the same `python` commands.
 
 **Open `reports/webull_backtest.html` in a browser.** It shows the verification verdict, the headline table and the portfolio equity curves. The terminal should end with:
 
@@ -37,32 +42,22 @@ Expected note metrics, net of the registered 1× costs:
 | PG | OOS | 16 | 1.00% | 1.11% | 0.91 | 0.35% | 5.6× |
 | P0 | OOS | 23 | 0.18% | 1.34% | 0.14 | 1.30% | 8.9× |
 
-The generated report also checks worst month. The exact values and tolerances are in `reports/webull_backtest.json`; a mismatch exits with a nonzero status. Typical replay runtime is about one minute after installation. To keep verification outputs separate, add `--output-dir /path/to/reports`.
+The four definition/statistics requests were quoted at approximately **$0.83 on 2026-10-04**; use the quote command to check the current price before downloading. The backtest runner itself never downloads data or initiates charges. A missing input stops with setup instructions rather than substituting saved trades.
+
+The generated report also checks worst month. Exact values and tolerances are in `reports/webull_backtest.json`; a mismatch exits with a nonzero status. To keep verification outputs separate, add `--output-dir /path/to/reports`. The saved summary and PDF can be read without credentials, but reproducing the results requires the local licensed inputs.
 
 ### What the Webull check establishes
 
 The runner uses the track's [Webull starter kit](third_party/webull_kit/VENDORED.md), vendored without source changes: Backtrader Cerebro, its analyzers, metric functions and detailed HTML reports. ES/ZN settlements enter through `PandasData`; this path does not call Webull OpenAPI or require a Webull account.
 
-- **Default `--replay`:** reads the frozen PG/P0 trade ledgers and held-contract settlement prices in `data/replay/`. Backtrader executes the scheduled orders, charges costs and checks all **85 PG and 127 P0 event P&Ls** within $0.01. It then checks seven metrics for each of two rows and two samples against `results.json` (28 comparisons).
-- **Scope:** PG and P0 at **1× costs**, IS and OOS. Default replay checks accounting and fills at assumed settlement marks. Signal generation, contract selection and sizing come from the ledger. Trade counts and turnover use that ledger; return-based metrics use Backtrader P&L.
-- **Outside this check:** PX bid/ask fills, the other strategy rows, 2× costs, inference, factors, risk and capacity. Those are produced by the full research pipeline below. Settlement fills are a modeling assumption, not evidence of execution at those prices.
+- **Default rebuild (also `--data`):** reconstructs the frozen signals, gate decisions, contract choices and integer sizes from local licensed settlements. Backtrader executes the resulting orders, charges costs and checks all **85 PG and 127 P0 event P&Ls** against the research engine within $0.01. Seven metrics for each of two rows and two samples are compared against `results.json` (28 comparisons). There is no committed replay bundle.
+- **Scope:** PG and P0 at **1× costs**, IS and OOS. Trade counts and turnover use the rebuilt ledger; return-based metrics use Backtrader P&L. The research engine supplies the signal logic; Backtrader independently verifies its accounting. Settlement fills are a modeling assumption, not evidence of execution at those prices.
+- **Outside this check:** PX bid/ask fills, other strategy rows, 2× costs, inference, factors, risk and capacity. Those are produced by the full research pipeline below.
 - **Different metrics in the kit:** its detailed reports count individual leg trades and use daily equity. The note uses paired events and monthly returns at fixed $10M NAV, with no compounding. Their Sharpe ratios and trade counts are therefore not interchangeable.
 
-The main summary works offline. The detailed `webull_kit_PG.html` and `webull_kit_P0.html` charts load Plotly from a CDN and need internet. No orders are sent to a broker.
+Before CME published open interest, contract selection uses same-day volume ranks (amendment A14). `data/selection_ranks.csv` stores derived ranks without volumes or prices; this permits reconstruction using only the four definition/statistics files. The full pipeline can independently rebuild the ranks from minute data.
 
-## Optional: reconstruct signals from licensed settlements
-
-This route rebuilds signals, gates, contract choices and sizes, then verifies that all replay inputs match the committed bundle before the Webull run. It needs a Databento account and licensed data access. The four definition/statistics requests were quoted at approximately **$0.83 on 2026-10-04**; check the current quote before purchasing.
-
-```bash
-cp .env.example .env
-# Add DATABENTO_API_KEY locally; never commit .env.
-python data/download.py --quote settlements
-python data/download.py --pull settlements
-python scripts/webull_backtest.py --data
-```
-
-Before CME published open interest, contract selection uses same-day volume ranks (amendment A14). `data/selection_ranks.csv` stores those ranks without volumes or prices. `--data` requires local settlement panels or all four raw files; it never silently falls back to replay. This remains a reproduction of the frozen rule, not a new opportunity to tune it.
+The summary works offline. Locally generated `webull_kit_PG.html` and `webull_kit_P0.html` include price charts and stay ignored by Git; their Plotly charts need internet. Do not upload these detailed reports. No orders are sent to a broker.
 
 ## Full research reproduction
 
@@ -95,11 +90,11 @@ Additional commands:
 | Tests, no credentials required | `python -m pytest -q` | Synthetic/unit checks; licensed pilot fixture skips if unavailable |
 | Inference calibration | `python scripts/calibrate_inference.py` | `reports/inference_calibration.md` |
 | IS / OOS data coverage | `python scripts/is_coverage.py` / `python scripts/oos_coverage.py` | Coverage reports |
-| Supplementary submission audit | `python scripts/submission_audit.py` | Matched PG/PX reporting checks |
+| Supplementary submission audit | `python scripts/submission_audit.py` | Matched PG/PX checks; requires local settlements |
 | Figures | `python scripts/build_figures.py` | `reports/figures/` |
 | PDF from saved results | `python scripts/render_note.py results.json` | `note/note.pdf` |
 
-Final clean-environment verification: **239 tests passed, 1 skipped** (the licensed pilot fixture). Both the offline replay and the settlement-based signal reconstruction matched PG/P0 at 1× costs. The separate full ALL rebuild matched every analytical result exactly, excluding only reported provenance.
+Clean-clone tests: **243 passed, 1 skipped** (licensed pilot fixture). The final download-based workflow is verified in an isolated Git clone using only the four licensed definition/statistics files, with no replay bundle or prebuilt panels. It reconstructs signals and matches PG/P0 event P&Ls and all 28 sample metrics at 1× costs. The earlier full ALL rebuild matched every analytical result exactly, excluding only reported provenance; the trading and analysis code is unchanged by this packaging revision.
 
 PDF export additionally requires Pandoc and Google Chrome at the macOS path used by the renderer. Judges do **not** need these tools to run the Webull check or read the supplied PDF.
 
@@ -127,7 +122,7 @@ The protocol sequence is `prereg-final` → `freeze-is` → `freeze-final`. Tags
 
 ## Data and attribution
 
-The full Databento history, `.env` and API keys are not committed. The small replay bundle contains **1,520 source settlement values**, the session calendar and derived trade ledgers. On 2026-10-04 the author confirmed explicit permission to redistribute this subset; that permission does not cover the full history. The track's separate rule against raw licensed data should be read alongside this permission when confirming submission eligibility.
+The submission tree contains no source-price replay bundle. Licensed Databento prices and raw downloads, `.env`, API keys, derived settlement panels and price-bearing detailed reports stay local and ignored by Git. The prior 1,520-price replay bundle was removed from the submission despite the author's confirmed redistribution permission, to follow the track's conservative download-only approach. A23 records this packaging change and the separate history-cleanup status. Derived performance summaries and portfolio equity curves remain available in `reports/` and the note.
 
 Sources are cited in the note: Databento GLBX.MDP3, Kenneth French's Data Library, the research motivating the hypothesis, CME margin requirements and the Webull/Backtrader tooling. The vendored starter's source and ZIP checksum are in [VENDORED.md](third_party/webull_kit/VENDORED.md).
 
@@ -139,7 +134,7 @@ Sources are cited in the note: Databento GLBX.MDP3, Kenneth French's Data Librar
 | `src/gqh/signals.py`, `gate.py`, `strategy.py`, `engine.py` | Signal, past-event fitting, six rows, integer sizing and P&L |
 | `src/gqh/stats.py`, `metrics.py` | Bootstrap, Holm, DSR, performance metrics |
 | `src/gqh/risk.py`, `capacity.py`, `diagnostics.py` | Risk, volume feasibility and mechanism diagnostics |
-| `scripts/webull_backtest.py` | Judge-facing Webull starter replay and reconciliation |
+| `scripts/webull_backtest.py` | Judge-facing settlement rebuild and Webull reconciliation |
 | `src/gqh/bt_replay.py` | Per-event second-engine check used by the research pipeline |
 | `src/gqh/pipeline.py`, `reproduce.py` | Full analysis and provenance |
 | `research/` | Separately labeled post-result research; not the submitted trading rule |
