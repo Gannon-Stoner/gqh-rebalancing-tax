@@ -41,6 +41,10 @@
       "backtrader": 104,
       "results_json": 104
      },
+     "turnover": {
+      "backtrader": 9.120746389111112,
+      "results_json": 9.120746389
+     },
      "worst_month": {
       "backtrader": -0.01166275,
       "results_json": -0.01166275
@@ -73,6 +77,10 @@
      "trades": {
       "backtrader": 23,
       "results_json": 23
+     },
+     "turnover": {
+      "backtrader": 8.94985375,
+      "results_json": 8.94985375
      },
      "worst_month": {
       "backtrader": -0.006151125,
@@ -132,6 +140,10 @@
       "backtrader": 69,
       "results_json": 69
      },
+     "turnover": {
+      "backtrader": 4.386542638888889,
+      "results_json": 4.386542639
+     },
      "worst_month": {
       "backtrader": -0.01166275,
       "results_json": -0.01166275
@@ -164,6 +176,10 @@
      "trades": {
       "backtrader": 16,
       "results_json": 16
+     },
+     "turnover": {
+      "backtrader": 5.5917725,
+      "results_json": 5.5917725
      },
      "worst_month": {
       "backtrader": -0.003487875,
